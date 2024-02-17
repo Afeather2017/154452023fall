@@ -2,6 +2,9 @@
 # This file specifies intentionally untracked files that git should ignore.
 #==============================================================================#
 /GRADESCOPE.md
+*gdb*
+debug/*
+
 
 #==============================================================================#
 # File extensions to be ignored anywhere in the tree.

@@ -46,8 +46,6 @@ TEST(TrieDebugger, TestCase) {
   //              trie.GetRoot()->children_.at('9')->children_.size(),
   //              *trie.Get<uint32_t>("969"));
 
-
-
   // (1) How many children nodes are there on the root?
   // Replace `CASE_1_YOUR_ANSWER` in `trie_answer.h` with the correct answer.
   if (CASE_1_YOUR_ANSWER != Case1CorrectAnswer()) {

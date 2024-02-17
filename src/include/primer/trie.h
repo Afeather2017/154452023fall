@@ -134,12 +134,9 @@ class Trie {
   auto GetRoot() const -> std::shared_ptr<const TrieNode> { return root_; }
 
  private:
-
   template <class T>
-  auto PutWithRef(std::string_view key,
-                  T& value,
-                  const std::shared_ptr<const TrieNode>& old_root
-                  ) const -> std::shared_ptr<const TrieNode>;
+  auto PutWithRef(std::string_view key, T &value, const std::shared_ptr<const TrieNode> &old_root) const
+      -> std::shared_ptr<const TrieNode>;
 };
 
 }  // namespace bustub

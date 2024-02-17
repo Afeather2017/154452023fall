@@ -18,7 +18,7 @@ auto TrieStore::Get(std::string_view key) -> std::optional<ValueGuard<T>> {
     std::lock_guard _{root_lock_};
     new_root = root_;
   }
-  const T* value{new_root.Get<T>(key)};
+  const T *value{new_root.Get<T>(key)};
   if (value == nullptr) {
     return std::nullopt;
   }

@@ -15,9 +15,11 @@ auto Trie::Get(std::string_view key) const -> const T * {
   // dynamic_cast returns `nullptr`, it means the type of the value is mismatched, and you should return nullptr.
   // Otherwise, return the value.
 
-  if (root_ == nullptr) { return nullptr; }
+  if (root_ == nullptr) {
+    return nullptr;
+  }
   std::shared_ptr<const TrieNode> next{root_};
-  for (auto c: key) {
+  for (auto c : key) {
     auto iter{next->children_.find(c)};
     if (iter == next->children_.end()) {
       return nullptr;
@@ -28,8 +30,8 @@ auto Trie::Get(std::string_view key) const -> const T * {
   // To return a value in the node,
   //   1. Cast to const TrieNodeWithValue*.
   //   2. return value inside it.
-  const TrieNodeWithValue<T>* p{dynamic_cast<const TrieNodeWithValue<T>*>(next.get())};
-  return p == nullptr ? nullptr: p->value_.get();
+  const TrieNodeWithValue<T> *p{dynamic_cast<const TrieNodeWithValue<T> *>(next.get())};
+  return p == nullptr ? nullptr : p->value_.get();
 }
 
 template <class T>
@@ -43,13 +45,11 @@ auto Trie::Put(std::string_view key, T value) const -> Trie {
 }
 
 template <class T>
-auto Trie::PutWithRef(std::string_view key,
-                      T& value,
-                      const std::shared_ptr<const TrieNode>& old_root
+auto Trie::PutWithRef(std::string_view key, T &value, const std::shared_ptr<const TrieNode> &old_root
                       // Why needs const before shared_ptr?
                       //   Attributes are marked with const
                       //   in any function marked with const.
-                      ) const -> std::shared_ptr<const TrieNode> {
+) const -> std::shared_ptr<const TrieNode> {
   std::shared_ptr<TrieNode> new_root{};
   if (old_root == nullptr) {
     if (key.empty()) {
@@ -68,7 +68,7 @@ auto Trie::PutWithRef(std::string_view key,
   }
   std::shared_ptr<TrieNode> next{new_root};
   std::shared_ptr<TrieNode> prev{nullptr};
-  for (auto c: key) {
+  for (auto c : key) {
     auto iter{next->children_.find(c)};
     prev = next;
     if (iter == next->children_.end()) {
@@ -76,13 +76,13 @@ auto Trie::PutWithRef(std::string_view key,
       next->children_[c] = new_node;
       next = new_node;
     } else {
-      next = iter->second->Clone(); // calls shared_ptr(unique_ptr&&)?
+      next = iter->second->Clone();  // calls shared_ptr(unique_ptr&&)?
       iter->second = next;
       // iter->second is shared_ptr<const TrieNode>.
       // and next is shared_ptr<TrieNode>
       // next = iter->second loss the const mark in this way.
-      //iter->second = iter->second->Clone();
-      //next = iter->second;
+      // iter->second = iter->second->Clone();
+      // next = iter->second;
     }
   }
   // Not work when value is noncopiable:
@@ -91,27 +91,28 @@ auto Trie::PutWithRef(std::string_view key,
   std::shared_ptr<T> value_ptr{std::make_shared<T>(std::move(value))};
   // Not work: std::make_shared<TrieNodeWithValue>(value_ptr);
   //   You must pass a full type when pass one to make_shared.
-  prev->children_[key.back()] = std::make_shared<TrieNodeWithValue<T>>(next->children_,
-                                                                       value_ptr);
+  prev->children_[key.back()] = std::make_shared<TrieNodeWithValue<T>>(next->children_, value_ptr);
   return new_root;
 }
 
 auto Trie::Remove(std::string_view key) const -> Trie {
   // You should walk through the trie and remove nodes if necessary. If the node doesn't contain a value any more,
   // you should convert it to `TrieNode`. If a node doesn't have children any more, you should remove it.
-  if (root_ == nullptr) { return Trie{nullptr}; }
+  if (root_ == nullptr) {
+    return Trie{nullptr};
+  }
   if (key.empty()) {
     if (root_->children_.empty()) {
       return Trie{};
     }
     return Trie{std::make_shared<TrieNode>(root_->children_)};
   }
-  std::shared_ptr<TrieNode> new_root{root_->Clone()};//old_root->Clone()};
+  std::shared_ptr<TrieNode> new_root{root_->Clone()};  // old_root->Clone()};
   std::shared_ptr<TrieNode> next{new_root};
   std::shared_ptr<TrieNode> prev{nullptr};
   std::shared_ptr<TrieNode> last_has_mult_child_or_value{nullptr};
   char last_has_mult_child_or_value_next_char{};
-  for (auto c: key) {
+  for (auto c : key) {
     if (next->children_.size() > 1 || next->is_value_node_) {
       last_has_mult_child_or_value_next_char = c;
       last_has_mult_child_or_value = next;
@@ -121,13 +122,13 @@ auto Trie::Remove(std::string_view key) const -> Trie {
     if (iter == next->children_.end()) {
       return Trie{root_};
     }
-    next = iter->second->Clone(); // calls shared_ptr(unique_ptr&&)?
+    next = iter->second->Clone();  // calls shared_ptr(unique_ptr&&)?
     iter->second = next;
     // iter->second is shared_ptr<const TrieNode>.
     // and next is shared_ptr<TrieNode>
     // next = iter->second loss the const mark in this way.
-    //iter->second = iter->second->Clone();
-    //next = iter->second;
+    // iter->second = iter->second->Clone();
+    // next = iter->second;
   }
   if (next->children_.empty()) {
     // The scenario that last_has_mult_child is nullptr:
