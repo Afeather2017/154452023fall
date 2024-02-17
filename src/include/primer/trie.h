@@ -5,6 +5,7 @@
 #include <future>  // NOLINT
 #include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -131,6 +132,14 @@ class Trie {
 
   // Get the root of the trie, should only be used in test cases.
   auto GetRoot() const -> std::shared_ptr<const TrieNode> { return root_; }
+
+ private:
+
+  template <class T>
+  auto PutWithRef(std::string_view key,
+                  T& value,
+                  const std::shared_ptr<const TrieNode>& old_root
+                  ) const -> std::shared_ptr<const TrieNode>;
 };
 
 }  // namespace bustub

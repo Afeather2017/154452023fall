@@ -41,6 +41,12 @@ TEST(TrieDebugger, TestCase) {
   }
 
   // Put a breakpoint here.
+  // fmt::println("{} {} {}",
+  //              trie.GetRoot()->children_.size(),
+  //              trie.GetRoot()->children_.at('9')->children_.size(),
+  //              *trie.Get<uint32_t>("969"));
+
+
 
   // (1) How many children nodes are there on the root?
   // Replace `CASE_1_YOUR_ANSWER` in `trie_answer.h` with the correct answer.
