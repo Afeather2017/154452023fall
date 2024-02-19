@@ -207,6 +207,7 @@ class BufferPoolManager {
     // This is a no-nop right now without a more complex data structure to track deallocated pages
   }
 
+  void ResetPage(frame_id_t frame_id, page_id_t page_id = INVALID_PAGE_ID);
   // TODO(student): You may add additional private members and helper functions
 };
 }  // namespace bustub

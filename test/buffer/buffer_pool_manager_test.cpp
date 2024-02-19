@@ -23,7 +23,7 @@ namespace bustub {
 
 // NOLINTNEXTLINE
 // Check whether pages containing terminal characters can be recovered
-TEST(BufferPoolManagerTest, DISABLED_BinaryDataTest) {
+TEST(BufferPoolManagerTest, BinaryDataTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t k = 5;
@@ -97,7 +97,7 @@ TEST(BufferPoolManagerTest, DISABLED_BinaryDataTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(BufferPoolManagerTest, DISABLED_SampleTest) {
+TEST(BufferPoolManagerTest, SampleTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t k = 5;
@@ -152,6 +152,91 @@ TEST(BufferPoolManagerTest, DISABLED_SampleTest) {
 
   delete bpm;
   delete disk_manager;
+}
+
+TEST(BufferPoolManagerTest, ManyAllocateTest) {
+  auto disk_manager = std::make_unique<DiskManager>();
+  const int bustub_page_cnt{6400};
+  auto bpm = std::make_unique<BufferPoolManager>(64, disk_manager.get(), 16);
+  std::vector<page_id_t> page_ids;
+  for (size_t i = 0; i < bustub_page_cnt; i++) {
+    page_id_t page_id;
+    auto *page = bpm->NewPage(&page_id);
+    if (page == nullptr) {
+      throw std::runtime_error("new page failed");
+    }
+
+    *page->GetData() = '1';
+
+    bpm->UnpinPage(page_id, true);
+    page_ids.push_back(page_id);
+  }
+}
+
+TEST(BufferPoolManagerTest, DirtyTest) {
+  auto disk_manager = std::make_unique<DiskManager>();
+  const int bustub_page_cnt{640};
+  auto bpm = std::make_unique<BufferPoolManager>(64, disk_manager.get(), 16);
+  for (size_t i = 0; i < bustub_page_cnt; i++) {
+    page_id_t page_id;
+    auto *page = bpm->NewPage(&page_id);
+    if (page == nullptr) {
+      throw std::runtime_error("new page failed");
+    }
+
+    *page->GetData() = '1';
+
+    ASSERT_EQ(false, page->IsDirty());
+    bpm->UnpinPage(page_id, true);
+    ASSERT_EQ(true, page->IsDirty());
+    bpm->FlushPage(page_id);
+    ASSERT_EQ(false, page->IsDirty());
+  }
+}
+
+TEST(BufferPoolManagerTest, FlushAllTest) {
+  auto disk_manager = std::make_unique<DiskManager>();
+  const int bustub_page_cnt{64};
+  auto bpm = std::make_unique<BufferPoolManager>(64, disk_manager.get(), 16);
+  for (size_t i = 0; i < bustub_page_cnt; i++) {
+    page_id_t page_id;
+    auto *page = bpm->NewPage(&page_id);
+    if (page == nullptr) {
+      throw std::runtime_error("new page failed");
+    }
+
+    *page->GetData() = '1';
+
+    ASSERT_EQ(false, page->IsDirty());
+    bpm->UnpinPage(page_id, true);
+    ASSERT_EQ(true, page->IsDirty());
+  }
+  bpm->FlushAllPages();
+  for (size_t i = 0; i < bustub_page_cnt; i++) {
+    page_id_t page_id{static_cast<page_id_t>(i)};
+    auto *page = bpm->FetchPage(page_id);
+    if (page == nullptr) {
+      throw std::runtime_error("fetch page failed");
+    }
+
+    ASSERT_EQ(false, page->IsDirty());
+  }
+}
+
+TEST(BufferPoolManagerTest, UnpinSamePageMultiTimes) {
+  auto disk_manager = std::make_unique<DiskManager>();
+  auto bpm = std::make_unique<BufferPoolManager>(64, disk_manager.get(), 16);
+  page_id_t page_id;
+  auto page{bpm->NewPage(&page_id)};
+  page = bpm->FetchPage(0);
+  page = bpm->FetchPage(0);
+  page = bpm->FetchPage(0);
+  page = bpm->FetchPage(0);
+  for (size_t i = 0; i < 10; i++) {
+    bpm->UnpinPage(0, true);
+    bpm->UnpinPage(0, false);
+    ASSERT_EQ(true, page->IsDirty());
+  }
 }
 
 }  // namespace bustub

@@ -16,7 +16,7 @@
 
 namespace bustub {
 
-TEST(LRUKReplacerTest, DISABLED_SampleTest) {
+TEST(LRUKReplacerTest, SampleTest) {
   LRUKReplacer lru_replacer(7, 2);
 
   // Scenario: add six elements to the replacer. We have [1,2,3,4,5]. Frame 6 is non-evictable.
@@ -94,5 +94,108 @@ TEST(LRUKReplacerTest, DISABLED_SampleTest) {
   // This operation should not modify size
   ASSERT_EQ(false, lru_replacer.Evict(&value));
   ASSERT_EQ(0, lru_replacer.Size());
+}
+
+TEST(LRUKReplacerTest, SetEvictableMultiTimes) {
+  size_t size{9};
+  size_t k{10};
+  LRUKReplacer r{size, k};
+
+  for (size_t i = 0; i < size; i++) {
+    r.RecordAccess(i);
+    r.SetEvictable(i, false);
+    r.SetEvictable(i, false);
+    r.SetEvictable(i, false);
+    r.SetEvictable(i, true);
+  }
+
+  ASSERT_EQ(9, r.Size());
+
+  for (size_t i = 0; i < size; i++) {
+    r.RecordAccess(i);
+    r.SetEvictable(i, true);
+    r.SetEvictable(i, true);
+    r.SetEvictable(i, true);
+    r.SetEvictable(i, false);
+    r.SetEvictable(i, true);
+    r.SetEvictable(i, false);
+  }
+  ASSERT_EQ(0, r.Size());
+}
+
+TEST(LRUKReplacerTest, Remove) {
+  size_t size{9};
+  size_t k{10};
+  LRUKReplacer r{size, k};
+  for (size_t i = 0; i < size; i++) {
+    r.RecordAccess(i);
+    r.SetEvictable(i, true);
+  }
+  for (size_t i = 0; i < size; i++) {
+    r.Remove(i);
+    ASSERT_EQ(size - i - 1, r.Size());
+  }
+}
+
+TEST(LRUKReplacerTest, MixedEvict1) {
+  size_t size{4};
+  size_t k{2};
+  LRUKReplacer r{size, k};
+
+  for (size_t i = 0; i < size; i++) {
+    r.RecordAccess(i);
+    r.SetEvictable(i, true);
+  }
+
+  r.RecordAccess(0);
+  r.RecordAccess(1);
+
+  frame_id_t frame_id;
+  r.Evict(&frame_id);
+  ASSERT_EQ(2, frame_id);
+}
+
+TEST(LRUKReplacerTest, MixedEvict2) {
+  size_t size{4};
+  size_t k{2};
+  LRUKReplacer r{size, k};
+
+  for (size_t i = 0; i < size; i++) {
+    r.RecordAccess(i);
+    r.SetEvictable(i, true);
+  }
+
+  r.RecordAccess(0);
+  r.RecordAccess(1);
+  r.RecordAccess(2);
+
+  frame_id_t frame_id;
+  r.Evict(&frame_id);
+  ASSERT_EQ(3, frame_id);
+}
+TEST(LRUKReplacerTest, LargerK) {
+  size_t size{4};
+  size_t k{3};
+  LRUKReplacer r{size, k};
+  r.RecordAccess(1);
+  r.RecordAccess(2);
+  r.RecordAccess(3);
+  r.RecordAccess(4);
+
+  r.RecordAccess(1);
+  r.RecordAccess(2);
+  r.RecordAccess(3);
+
+  r.RecordAccess(1);
+  r.RecordAccess(2);
+
+  r.SetEvictable(1, true);
+  r.SetEvictable(2, true);
+  r.SetEvictable(3, true);
+  r.SetEvictable(4, true);
+
+  frame_id_t frame_id;
+  ASSERT_EQ(true, r.Evict(&frame_id));
+  ASSERT_EQ(3, frame_id);
 }
 }  // namespace bustub

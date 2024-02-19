@@ -26,14 +26,32 @@ namespace bustub {
 enum class AccessType { Unknown = 0, Lookup, Scan, Index };
 
 class LRUKNode {
- private:
+ public:
   /** History of last seen K timestamps of this page. Least recent timestamp stored in front. */
-  // Remove maybe_unused if you start using them. Feel free to change the member variables as you want.
+  LRUKNode(size_t k, frame_id_t frame_id) : k_{k}, fid_{frame_id} {}
+  void UpdateAccessTime(size_t current_time) {
+    history_.push_front(current_time);
+    if (history_.size() > k_) {
+      history_.pop_back();
+    }
+  }
+  void SetEvictability(bool evictability) { is_evictable_ = evictability; }
+  auto GetEvictability() const { return is_evictable_; }
+  auto LastAccessTime() const -> size_t { return history_.front(); }
+  auto EarliestAccessTime() const -> size_t { return history_.back(); }
+  auto LastKthAccessTime() const -> size_t {
+    if (history_.size() < k_) {
+      return std::numeric_limits<size_t>::max();
+    }
+    return history_.back();
+  }
+  auto HistorySize() const -> size_t { return history_.size(); }
 
-  [[maybe_unused]] std::list<size_t> history_;
-  [[maybe_unused]] size_t k_;
+ private:
+  std::list<size_t> history_;
+  size_t k_;
   [[maybe_unused]] frame_id_t fid_;
-  [[maybe_unused]] bool is_evictable_{false};
+  bool is_evictable_{false};
 };
 
 /**
@@ -147,15 +165,21 @@ class LRUKReplacer {
    */
   auto Size() -> size_t;
 
+  /**
+   * @brief Return the frame is evictable or not
+   * @return bool
+   */
+  auto IsEvictable(frame_id_t frame_id) -> bool;
+
  private:
   // TODO(student): implement me! You can replace these member variables as you like.
   // Remove maybe_unused if you start using them.
-  [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
-  [[maybe_unused]] size_t current_timestamp_{0};
-  [[maybe_unused]] size_t curr_size_{0};
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  std::unordered_map<frame_id_t, LRUKNode> node_store_;
+  size_t current_timestamp_{0};
+  size_t curr_size_{0};
+  size_t replacer_size_;
+  size_t k_;
+  std::mutex latch_;
 };
 
 }  // namespace bustub
