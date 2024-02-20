@@ -239,4 +239,24 @@ TEST(BufferPoolManagerTest, UnpinSamePageMultiTimes) {
   }
 }
 
+TEST(BufferPoolManagerTest, PinnedPageNotEvicted) {
+  auto disk_manager = std::make_unique<DiskManager>();
+  auto bpm = std::make_unique<BufferPoolManager>(1, disk_manager.get(), 16);
+  // Create 1 page first.
+  page_id_t page_id;
+  bpm->NewPage(&page_id);
+  bpm->UnpinPage(0, true);
+
+  // Fetch page 0 3 times, make pin count to 3.
+  bpm->FetchPage(0);
+  bpm->FetchPage(0);
+  bpm->FetchPage(0);
+
+  // Unpin 1 times, make pin count to 2.
+  bpm->UnpinPage(0, true);
+
+  // Create new page, which must failed.
+  ASSERT_EQ(nullptr, bpm->NewPage(&page_id));
+}
+
 }  // namespace bustub

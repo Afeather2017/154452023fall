@@ -136,7 +136,10 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
     return false;
   }
 
-  replacer_->SetEvictable(frame_id, true);
+  if (page->pin_count_ == 1) {
+    // Fix the bug when evict a page.
+    replacer_->SetEvictable(frame_id, true);
+  }
   page->pin_count_--;
   page->is_dirty_ |= is_dirty;
   return true;

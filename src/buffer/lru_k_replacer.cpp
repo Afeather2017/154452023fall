@@ -18,9 +18,7 @@ namespace bustub {
 
 size_t times{0};
 
-LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {
-  fmt::println("{}.{}({}, {})", __func__, times, num_frames, k);
-}
+LRUKReplacer::LRUKReplacer(size_t num_frames, size_t k) : replacer_size_(num_frames), k_(k) {}
 
 auto LRUKReplacer::Evict(frame_id_t *frame_id) -> bool {
   size_t min_kth_time{std::numeric_limits<size_t>::max()};
