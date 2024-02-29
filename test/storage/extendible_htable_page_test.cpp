@@ -29,7 +29,7 @@
 namespace bustub {
 
 // NOLINTNEXTLINE
-TEST(ExtendibleHTableTest, DISABLED_BucketPageSampleTest) {
+TEST(ExtendibleHTableTest, BucketPageSampleTest) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());
 
@@ -87,7 +87,7 @@ TEST(ExtendibleHTableTest, DISABLED_BucketPageSampleTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
+TEST(ExtendibleHTableTest, HeaderDirectoryPageSampleTest) {
   auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());
 
@@ -144,7 +144,7 @@ TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
     /*
     ======== DIRECTORY (global_depth_: 0) ========
     | bucket_idx | page_id | local_depth |
-    |    0    |    2    |    0    |
+    |     0      |    2    |      0      |
     ================ END DIRECTORY ================
     */
 
@@ -161,8 +161,8 @@ TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
     /*
     ======== DIRECTORY (global_depth_: 1) ========
     | bucket_idx | page_id | local_depth |
-    |    0    |    2    |    1    |
-    |    1    |    3    |    1    |
+    |      0     |    2    |      1      |
+    |      1     |    3    |      1      |
     ================ END DIRECTORY ================
     */
 
@@ -182,10 +182,10 @@ TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
     /*
     ======== DIRECTORY (global_depth_: 2) ========
     | bucket_idx | page_id | local_depth |
-    |    0    |    2    |    2    |
-    |    1    |    3    |    1    |
-    |    2    |    4    |    2    |
-    |    3    |    3    |    1    |
+    |     0      |    2    |      2      |
+    |     1      |    3    |      1      |
+    |     2      |    4    |      2      |
+    |     3      |    3    |      1      |
     ================ END DIRECTORY ================
     */
 
@@ -207,14 +207,14 @@ TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
     /*
     ======== DIRECTORY (global_depth_: 3) ========
     | bucket_idx | page_id | local_depth |
-    |    0    |    2    |    3    |
-    |    1    |    3    |    1    |
-    |    2    |    4    |    2    |
-    |    3    |    3    |    1    |
-    |    4    |    5    |    3    |
-    |    5    |    3    |    1    |
-    |    6    |    4    |    2    |
-    |    7    |    3    |    1    |
+    |     0      |    2    |      3      |
+    |     1      |    3    |      1      |
+    |     2      |    4    |      2      |
+    |     3      |    3    |      1      |
+    |     4      |    5    |      3      |
+    |     5      |    3    |      1      |
+    |     6      |    4    |      2      |
+    |     7      |    3    |      1      |
     ================ END DIRECTORY ================
     */
     directory_page->VerifyIntegrity();
@@ -246,14 +246,14 @@ TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
     /*
     ======== DIRECTORY (global_depth_: 3) ========
     | bucket_idx | page_id | local_depth |
-    |    0    |    5    |    2    |
-    |    1    |    3    |    1    |
-    |    2    |    4    |    2    |
-    |    3    |    3    |    1    |
-    |    4    |    5    |    2    |
-    |    5    |    3    |    1    |
-    |    6    |    4    |    2    |
-    |    7    |    3    |    1    |
+    |     0      |    5    |      2      |
+    |     1      |    3    |      1      |
+    |     2      |    4    |      2      |
+    |     3      |    3    |      1      |
+    |     4      |    5    |      2      |
+    |     5      |    3    |      1      |
+    |     6      |    4    |      2      |
+    |     7      |    3    |      1      |
     ================ END DIRECTORY ================
     */
 
@@ -263,10 +263,10 @@ TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
     /*
     ======== DIRECTORY (global_depth_: 2) ========
     | bucket_idx | page_id | local_depth |
-    |    0    |    5    |    2    |
-    |    1    |    3    |    1    |
-    |    2    |    4    |    2    |
-    |    3    |    3    |    1    |
+    |     0      |    5    |      2      |
+    |     1      |    3    |      1      |
+    |     2      |    4    |      2      |
+    |     3      |    3    |      1      |
     ================ END DIRECTORY ================
     */
 
@@ -274,6 +274,67 @@ TEST(ExtendibleHTableTest, DISABLED_HeaderDirectoryPageSampleTest) {
     ASSERT_EQ(directory_page->Size(), 4);
     ASSERT_EQ(directory_page->CanShrink(), false);
   }  // page guard dropped
+}
+
+TEST(ExtendibleHTableTest, SetLocalDepthTest) {
+  auto disk_mgr = std::make_unique<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_unique<BufferPoolManager>(5, disk_mgr.get());
+  page_id_t directory_page_id;
+  BasicPageGuard directory_guard = bpm->NewPageGuarded(&directory_page_id);
+  auto dp{directory_guard.AsMut<ExtendibleHTableDirectoryPage>()};
+  /*
+  ======== DIRECTORY (global_depth_: 0) ========
+  | bucket_idx | page_id | local_depth |
+  |     0      |    1    |      0      |
+  ================ END DIRECTORY ================
+  */
+  dp->Init(3);
+  dp->SetBucketPageId(0, 1);
+  dp->VerifyIntegrity();
+
+  /*
+  ======== DIRECTORY (global_depth_: 0) ========
+  | bucket_idx | page_id | local_depth |
+  |     0      |    1    |      1      |
+  |     0      |    2    |      1      |
+  ================ END DIRECTORY ================
+  */
+  dp->IncrGlobalDepth();
+  dp->SetBucketPageId(0, 2);
+  dp->SetLocalDepth(0, 1);
+  dp->SetLocalDepth(1, 1);
+  dp->VerifyIntegrity();
+
+  /*
+  ======== DIRECTORY (global_depth_: 0) ========
+  | bucket_idx | page_id | local_depth |
+  |     0      |    1    |      1      |
+  |     0      |    2    |      1      |
+  |     0      |    1    |      1      |
+  |     0      |    2    |      1      |
+  ================ END DIRECTORY ================
+  */
+  dp->IncrGlobalDepth();
+  dp->VerifyIntegrity();
+
+  /*
+  ======== DIRECTORY (global_depth_: 0) ========
+  | bucket_idx | page_id | local_depth |
+  |     0      |    1    |      1      |
+  |     0      |    2    |      1      |
+  |     0      |    1    |      1      |
+  |     0      |    2    |      1      |
+  |     0      |    1    |      1      |
+  |     0      |    2    |      1      |
+  |     0      |    1    |      1      |
+  |     0      |    2    |      1      |
+  ================ END DIRECTORY ================
+  */
+  dp->IncrGlobalDepth();
+  dp->SetLocalDepth(1, 2);
+  dp->SetBucketPageId(5, 3);
+  dp->SetBucketPageId(7, 3);
+  dp->VerifyIntegrity();
 }
 
 }  // namespace bustub

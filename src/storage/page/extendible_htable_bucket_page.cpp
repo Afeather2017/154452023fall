@@ -28,6 +28,7 @@ template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const KC &cmp) const -> bool {
   for (uint32_t i = 0; i < size_; i++) {
     if (0 == cmp(key, array_[i].first)) {
+      value = array_[i].second;
       return true;
     }
   }
