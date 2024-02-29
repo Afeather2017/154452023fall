@@ -14,13 +14,63 @@
 
 #include "common/exception.h"
 #include "common/macros.h"
+#include "fmt/core.h"
 #include "storage/page/page_guard.h"
+
+#include <chrono>
+#include <thread>
+#include <sstream>
+using namespace std::chrono_literals;
+
+#define TO_STRING_ARG_COUNT(...) TO_STRING_ARG_COUNT_(0, ##__VA_ARGS__, \
+  9, 8, 7, 6, 5,\
+  4, 3, 2, 1, 0)
+
+#define TO_STRING_ARG_COUNT_(\
+  _0, _1, _2, _3, _4,\
+  _5, _6, _7, _8, _9, N, ...) N
+
+#define TO_STRING9(v, ...) v << ',' << TO_STRING8(__VA_ARGS__)
+#define TO_STRING8(v, ...) v << ',' << TO_STRING7(__VA_ARGS__)
+#define TO_STRING7(v, ...) v << ',' << TO_STRING6(__VA_ARGS__)
+#define TO_STRING6(v, ...) v << ',' << TO_STRING5(__VA_ARGS__)
+#define TO_STRING5(v, ...) v << ',' << TO_STRING4(__VA_ARGS__)
+#define TO_STRING4(v, ...) v << ',' << TO_STRING3(__VA_ARGS__)
+#define TO_STRING3(v, ...) v << ',' << TO_STRING2(__VA_ARGS__)
+#define TO_STRING2(v, ...) v << ',' << TO_STRING1(__VA_ARGS__)
+#define TO_STRING1(v, ...) v
+#define TO_STRING0(...) ""
+
+#define TO_STRING(a) # a
+
+
+// This is the worked way
+#define CONCAT_(a, b) a ## b
+#define CONCAT(a, b) CONCAT_(a, b)
+
+// This way is not worked. It treat a and b as literals, not macros.
+//#define CONCAT(a, b) a ## b
+
+
+#define PRINT_CALL(...) { std::stringstream ss;\
+  ss << CONCAT(TO_STRING, TO_STRING_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__);\
+  fmt::println(stderr, "{}:{}:{} with '({})'.",\
+  __PRETTY_FUNCTION__, __LINE__, TO_STRING(a), ss.str()); } /* NOLINT */
+
+#define MEM_CALL(...) PRINT_CALL(this, ##__VA_ARGS__)
+
+#define ENSURE(a) if (!(a) /* NOLINT */) {\
+  fmt::println(stderr, "{}:{}:{} failed.",\
+  __PRETTY_FUNCTION__, __LINE__, TO_STRING(a));\
+  std::this_thread::sleep_for(500ms);\
+  std::terminate(); }
 
 namespace bustub {
 
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager, size_t replacer_k,
                                      LogManager *log_manager)
     : pool_size_(pool_size), disk_scheduler_(std::make_unique<DiskScheduler>(disk_manager)), log_manager_(log_manager) {
+  MEM_CALL(pool_size, replacer_k); 
   // we allocate a consecutive memory space for the buffer pool
   pages_ = new Page[pool_size_];
   replacer_ = std::make_unique<LRUKReplacer>(pool_size, replacer_k);
@@ -31,7 +81,10 @@ BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager
   }
 }
 
-BufferPoolManager::~BufferPoolManager() { delete[] pages_; }
+BufferPoolManager::~BufferPoolManager() {
+  MEM_CALL();
+  delete[] pages_;
+}
 
 void BufferPoolManager::ResetPage(frame_id_t frame_id, page_id_t page_id) {
   Page *page = &pages_[frame_id];
@@ -41,6 +94,7 @@ void BufferPoolManager::ResetPage(frame_id_t frame_id, page_id_t page_id) {
 }
 
 auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
+  MEM_CALL();
   std::lock_guard _{latch_};
   frame_id_t fetched_frame_id{};
   // Get a valid frame
@@ -75,6 +129,10 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 }
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
+  MEM_CALL(page_id);
+  if (page_id == INVALID_PAGE_ID) {
+    return nullptr;
+  }
   std::lock_guard _{latch_};
   auto iter{page_table_.find(page_id)};
   // Check if the page is already loaded in memory.
@@ -124,6 +182,7 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
 }
 
 auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unused]] AccessType access_type) -> bool {
+  MEM_CALL(page_id, is_dirty);
   std::lock_guard _{latch_};
   auto iter{page_table_.find(page_id)};
   if (iter == page_table_.end()) {
@@ -146,6 +205,7 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
 }
 
 auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
+  MEM_CALL(page_id);
   std::lock_guard _{latch_};
   auto iter{page_table_.find(page_id)};
   if (iter == page_table_.end()) {
@@ -162,6 +222,7 @@ auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
 }
 
 void BufferPoolManager::FlushAllPages() {
+  MEM_CALL();
   std::lock_guard _{latch_};
   std::vector<std::future<bool>> fs;
   fs.reserve(page_table_.size());
@@ -179,6 +240,7 @@ void BufferPoolManager::FlushAllPages() {
 }
 
 auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
+  MEM_CALL(page_id);
   std::lock_guard _{latch_};
   auto iter{page_table_.find(page_id)};
   if (iter == page_table_.end()) {
@@ -198,12 +260,45 @@ auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
 
 auto BufferPoolManager::AllocatePage() -> page_id_t { return next_page_id_++; }
 
-auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard { return {this, nullptr}; }
+auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard {
+  MEM_CALL(page_id);
+  Page *page{FetchPage(page_id)};
+  // FetchPage pinned the page, so the page will be in mem.
+  if (page == nullptr) {
+    return {};
+  }
+  return {this, page};
+}
 
-auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard { return {this, nullptr}; }
+auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
+  MEM_CALL(page_id);
+  Page *page{FetchPage(page_id)};
+  if (page == nullptr) {
+    return {};
+  }
+  // WARN: This is not recommanded. RAII is the better way to manage lock.
+  page->RLatch();
+  return {this, page};
+}
 
-auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard { return {this, nullptr}; }
+auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard {
+  MEM_CALL(page_id);
+  Page *page{FetchPage(page_id)};
+  if (page == nullptr) {
+    return {};
+  }
+  // WARN: This is not recommanded. RAII is the better way to manage lock.
+  page->WLatch();
+  return {this, page};
+}
 
-auto BufferPoolManager::NewPageGuarded(page_id_t *page_id) -> BasicPageGuard { return {this, nullptr}; }
+auto BufferPoolManager::NewPageGuarded(page_id_t *page_id) -> BasicPageGuard {
+  MEM_CALL();
+  Page *page{NewPage(page_id)};
+  if (page == nullptr) {
+    return {};
+  }
+  return {this, page};
+}
 
 }  // namespace bustub
