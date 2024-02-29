@@ -17,10 +17,12 @@
 #include "fmt/core.h"
 #include "storage/page/page_guard.h"
 
+#ifndef AFEATHER_ENSURE_
+#define AFEATHER_ENSURE_
+#include <fmt/format.h>
 #include <chrono>
 #include <thread>
 #include <sstream>
-using namespace std::chrono_literals;
 
 #define TO_STRING_ARG_COUNT(...) TO_STRING_ARG_COUNT_(0, ##__VA_ARGS__, \
   9, 8, 7, 6, 5,\
@@ -51,7 +53,6 @@ using namespace std::chrono_literals;
 // This way is not worked. It treat a and b as literals, not macros.
 //#define CONCAT(a, b) a ## b
 
-
 #define PRINT_CALL(...) { std::stringstream ss;\
   ss << CONCAT(TO_STRING, TO_STRING_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__);\
   fmt::println(stderr, "{}:{}:{} with '({})'.",\
@@ -62,8 +63,10 @@ using namespace std::chrono_literals;
 #define ENSURE(a) if (!(a) /* NOLINT */) {\
   fmt::println(stderr, "{}:{}:{} failed.",\
   __PRETTY_FUNCTION__, __LINE__, TO_STRING(a));\
-  std::this_thread::sleep_for(500ms);\
+  std::this_thread::sleep_for(std::chrono::microseconds() * 500);\
   std::terminate(); }
+
+#endif // AFEATHER_ENSURE_
 
 namespace bustub {
 
