@@ -110,6 +110,11 @@ class DiskExtendibleHashTable {
    */
   auto Hash(K key) const -> uint32_t;
 
+  /**
+   * The max size of header
+   */
+  auto MaxSizeOfHeader() const -> uint32_t { return 1U << header_max_depth_; }
+
   auto InsertToNewDirectory(ExtendibleHTableHeaderPage *header, uint32_t directory_idx, uint32_t hash, const K &key,
                             const V &value) -> bool;
 
@@ -123,6 +128,9 @@ class DiskExtendibleHashTable {
                       ExtendibleHTableBucketPage<K, V, KC> *new_bucket, uint32_t new_bucket_idx,
                       uint32_t local_depth_mask);
 
+  auto MergeRecursively(ExtendibleHTableDirectoryPage *directory, uint32_t empty_idx,
+                        WritePageGuard &empty_bucket_guard) -> std::pair<uint32_t, uint32_t>;
+
   // member variables
   std::string index_name_;
   BufferPoolManager *bpm_;
@@ -133,5 +141,6 @@ class DiskExtendibleHashTable {
   uint32_t bucket_max_size_;
   page_id_t header_page_id_;
 };
+template class DiskExtendibleHashTable<GenericKey<8>, int, GenericComparator<8>>;
 
 }  // namespace bustub

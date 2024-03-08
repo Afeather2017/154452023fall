@@ -12,6 +12,8 @@
 
 #include "buffer/buffer_pool_manager.h"
 
+#include <limits>
+#include <numeric>
 #include "common/exception.h"
 #include "common/macros.h"
 #include "fmt/core.h"
@@ -21,16 +23,12 @@
 #define AFEATHER_ENSURE_
 #include <fmt/format.h>
 #include <chrono>
-#include <thread>
 #include <sstream>
+#include <thread>
 
-#define TO_STRING_ARG_COUNT(...) TO_STRING_ARG_COUNT_(0, ##__VA_ARGS__, \
-  9, 8, 7, 6, 5,\
-  4, 3, 2, 1, 0)
+#define TO_STRING_ARG_COUNT(...) TO_STRING_ARG_COUNT_(0, ##__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
-#define TO_STRING_ARG_COUNT_(\
-  _0, _1, _2, _3, _4,\
-  _5, _6, _7, _8, _9, N, ...) N
+#define TO_STRING_ARG_COUNT_(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, N, ...) N
 
 #define TO_STRING9(v, ...) v << ',' << TO_STRING8(__VA_ARGS__)
 #define TO_STRING8(v, ...) v << ',' << TO_STRING7(__VA_ARGS__)
@@ -43,37 +41,44 @@
 #define TO_STRING1(v, ...) v
 #define TO_STRING0(...) ""
 
-#define TO_STRING(a) # a
-
+#define TO_STRING(a) #a
 
 // This is the worked way
-#define CONCAT_(a, b) a ## b
+#define CONCAT_(a, b) a##b
 #define CONCAT(a, b) CONCAT_(a, b)
 
 // This way is not worked. It treat a and b as literals, not macros.
-//#define CONCAT(a, b) a ## b
+// #define CONCAT(a, b) a ## b
 
-#define PRINT_CALL(...) { std::stringstream ss;\
-  ss << CONCAT(TO_STRING, TO_STRING_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__);\
-  fmt::println(stderr, "{}:{}:{} with '({})'.",\
-  __PRETTY_FUNCTION__, __LINE__, TO_STRING(a), ss.str()); } /* NOLINT */
+#define PRINT_CALL(...)                                                                                   \
+  {                                                                                                       \
+    std::stringstream ss;                                                                                 \
+    ss << CONCAT(TO_STRING, TO_STRING_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__);                               \
+    fmt::println(stderr, "{}:{}:{} with '({})'.", __PRETTY_FUNCTION__, __LINE__, TO_STRING(a), ss.str()); \
+  } /* NOLINT */
 
 #define MEM_CALL(...) PRINT_CALL(this, ##__VA_ARGS__)
 
-#define ENSURE(a) if (!(a) /* NOLINT */) {\
-  fmt::println(stderr, "{}:{}:{} failed.",\
-  __PRETTY_FUNCTION__, __LINE__, TO_STRING(a));\
-  std::this_thread::sleep_for(std::chrono::microseconds() * 500);\
-  std::terminate(); }
+#define ENSURE(a)                                                                          \
+  if (!(a) /* NOLINT */) {                                                                 \
+    fmt::println(stderr, "{}:{}:{} failed.", __PRETTY_FUNCTION__, __LINE__, TO_STRING(a)); \
+    std::this_thread::sleep_for(std::chrono::microseconds() * 500);                        \
+    std::terminate();                                                                      \
+  }
 
-#endif // AFEATHER_ENSURE_
+#undef ENSURE
+#undef PRINT_CALL
+#define ENSURE(a)
+#define PRINT_CALL(a)
+
+#endif  // AFEATHER_ENSURE_
 
 namespace bustub {
 
 BufferPoolManager::BufferPoolManager(size_t pool_size, DiskManager *disk_manager, size_t replacer_k,
                                      LogManager *log_manager)
     : pool_size_(pool_size), disk_scheduler_(std::make_unique<DiskScheduler>(disk_manager)), log_manager_(log_manager) {
-  MEM_CALL(pool_size, replacer_k); 
+  MEM_CALL(pool_size, replacer_k);
   // we allocate a consecutive memory space for the buffer pool
   pages_ = new Page[pool_size_];
   replacer_ = std::make_unique<LRUKReplacer>(pool_size, replacer_k);
@@ -261,7 +266,12 @@ auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool {
   return true;
 }
 
-auto BufferPoolManager::AllocatePage() -> page_id_t { return next_page_id_++; }
+auto BufferPoolManager::AllocatePage() -> page_id_t {
+  if (next_page_id_ == std::numeric_limits<page_id_t>::max()) {
+    throw Exception("Allocate overflow");
+  }
+  return next_page_id_++;
+}
 
 auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard {
   MEM_CALL(page_id);

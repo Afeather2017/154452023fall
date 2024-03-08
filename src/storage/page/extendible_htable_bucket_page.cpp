@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <optional>
 #include <utility>
-#include <algorithm>
 
 #include "common/exception.h"
 #include "storage/page/extendible_htable_bucket_page.h"
@@ -22,6 +22,7 @@ namespace bustub {
 template <typename K, typename V, typename KC>
 void ExtendibleHTableBucketPage<K, V, KC>::Init(uint32_t max_size) {
   max_size_ = max_size;
+  size_ = 0;
 }
 
 template <typename K, typename V, typename KC>
@@ -37,7 +38,9 @@ auto ExtendibleHTableBucketPage<K, V, KC>::Lookup(const K &key, V &value, const 
 
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::Insert(const K &key, const V &value, const KC &cmp) -> bool {
-  if (Lookup(key, const_cast<V&>(value), cmp)) {
+  V another;
+  if (Lookup(key, another, cmp)) {
+    // Unique keys only. This means that the hash table should return false if the user tries to insert duplicate keys.
     return false;
   }
   if (size_ == max_size_) {
@@ -91,6 +94,11 @@ auto ExtendibleHTableBucketPage<K, V, KC>::IsFull() const -> bool {
 template <typename K, typename V, typename KC>
 auto ExtendibleHTableBucketPage<K, V, KC>::IsEmpty() const -> bool {
   return size_ == 0;
+}
+
+template <typename K, typename V, typename KC>
+void ExtendibleHTableBucketPage<K, V, KC>::Append(const K &key, const V &value) {
+  array_[size_++] = {key, value};
 }
 
 template class ExtendibleHTableBucketPage<int, int, IntComparator>;

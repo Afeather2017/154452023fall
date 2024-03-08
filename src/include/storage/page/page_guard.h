@@ -6,16 +6,12 @@
 #define AFEATHER_ENSURE_
 #include <fmt/format.h>
 #include <chrono>
-#include <thread>
 #include <sstream>
+#include <thread>
 
-#define TO_STRING_ARG_COUNT(...) TO_STRING_ARG_COUNT_(0, ##__VA_ARGS__, \
-  9, 8, 7, 6, 5,\
-  4, 3, 2, 1, 0)
+#define TO_STRING_ARG_COUNT(...) TO_STRING_ARG_COUNT_(0, ##__VA_ARGS__, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 
-#define TO_STRING_ARG_COUNT_(\
-  _0, _1, _2, _3, _4,\
-  _5, _6, _7, _8, _9, N, ...) N
+#define TO_STRING_ARG_COUNT_(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, N, ...) N
 
 #define TO_STRING9(v, ...) v << ',' << TO_STRING8(__VA_ARGS__)
 #define TO_STRING8(v, ...) v << ',' << TO_STRING7(__VA_ARGS__)
@@ -28,30 +24,37 @@
 #define TO_STRING1(v, ...) v
 #define TO_STRING0(...) ""
 
-#define TO_STRING(a) # a
-
+#define TO_STRING(a) #a
 
 // This is the worked way
-#define CONCAT_(a, b) a ## b
+#define CONCAT_(a, b) a##b
 #define CONCAT(a, b) CONCAT_(a, b)
 
 // This way is not worked. It treat a and b as literals, not macros.
-//#define CONCAT(a, b) a ## b
+// #define CONCAT(a, b) a ## b
 
-#define PRINT_CALL(...) { std::stringstream ss;\
-  ss << CONCAT(TO_STRING, TO_STRING_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__);\
-  fmt::println(stderr, "{}:{}:{} with '({})'.",\
-  __PRETTY_FUNCTION__, __LINE__, TO_STRING(a), ss.str()); } /* NOLINT */
+#define PRINT_CALL(...)                                                                                   \
+  {                                                                                                       \
+    std::stringstream ss;                                                                                 \
+    ss << CONCAT(TO_STRING, TO_STRING_ARG_COUNT(__VA_ARGS__))(__VA_ARGS__);                               \
+    fmt::println(stderr, "{}:{}:{} with '({})'.", __PRETTY_FUNCTION__, __LINE__, TO_STRING(a), ss.str()); \
+  } /* NOLINT */
 
 #define MEM_CALL(...) PRINT_CALL(this, ##__VA_ARGS__)
 
-#define ENSURE(a) if (!(a) /* NOLINT */) {\
-  fmt::println(stderr, "{}:{}:{} failed.",\
-  __PRETTY_FUNCTION__, __LINE__, TO_STRING(a));\
-  std::this_thread::sleep_for(std::chrono::microseconds() * 500);\
-  std::terminate(); }
+#define ENSURE(a)                                                                          \
+  if (!(a) /* NOLINT */) {                                                                 \
+    fmt::println(stderr, "{}:{}:{} failed.", __PRETTY_FUNCTION__, __LINE__, TO_STRING(a)); \
+    std::this_thread::sleep_for(std::chrono::microseconds() * 500);                        \
+    std::terminate();                                                                      \
+  }
 
-#endif // AFEATHER_ENSURE_
+#undef ENSURE
+#undef PRINT_CALL
+#define ENSURE(a)
+#define PRINT_CALL(...)
+
+#endif  // AFEATHER_ENSURE_
 
 namespace bustub {
 
@@ -141,8 +144,7 @@ class BasicPageGuard {
   template <class T>
   auto As() -> const T * {
     MEM_CALL();
-    ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-      (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+    ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
     if (bpm_ == nullptr) {
       return nullptr;
     }
@@ -154,14 +156,12 @@ class BasicPageGuard {
   template <class T>
   auto AsMut() -> T * {
     MEM_CALL();
-    ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-      (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+    ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
     if (bpm_ == nullptr) {
       return nullptr;
     }
     return reinterpret_cast<T *>(GetDataMut());
   }
-
 
  private:
   friend class ReadPageGuard;
@@ -226,9 +226,8 @@ class ReadPageGuard {
   template <class T>
   auto As() -> const T * {
     MEM_CALL();
-    ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-        || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-          && guard_.page_->GetPinCount() > 0));
+    ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+           (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
     if (guard_.bpm_ == nullptr) {
       return nullptr;
     }
@@ -294,9 +293,8 @@ class WritePageGuard {
   template <class T>
   auto As() -> const T * {
     MEM_CALL();
-    ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-        || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-          && guard_.page_->GetPinCount() > 0));
+    ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+           (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
     if (guard_.bpm_ == nullptr) {
       return nullptr;
     }
@@ -308,9 +306,8 @@ class WritePageGuard {
   template <class T>
   auto AsMut() -> T * {
     MEM_CALL();
-    ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-        || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-          && guard_.page_->GetPinCount() > 0));
+    ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+           (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
     if (guard_.bpm_ == nullptr) {
       return nullptr;
     }

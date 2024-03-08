@@ -206,7 +206,6 @@ TEST(PageGuardTest, DropTest1) {
     g.Drop();
     g.Drop();
   }
-
 }
 
 TEST(PageGuardTest, DropTest2) {
@@ -227,8 +226,8 @@ TEST(PageGuardTest, DropTest2) {
 
   {
     page_id_t page_id;
-    Page* a{bpm->NewPage(&page_id)};
-    Page* b{bpm->NewPage(&page_id)};
+    Page *a{bpm->NewPage(&page_id)};
+    Page *b{bpm->NewPage(&page_id)};
     BasicPageGuard c{bpm.get(), a};
 
     BasicPageGuard e{bpm.get(), b};
@@ -251,7 +250,7 @@ TEST(PageGuardTest, DtorTest) {
     delete p;
     EXPECT_EQ(0, bpm->GetPages()[frame_id].GetPinCount());
   }
-  { // A page fetched writing must hold a wlatch
+  {  // A page fetched writing must hold a wlatch
     page_id_t page_id{0};
     frame_id_t frame_id{0};
     auto p{bpm->FetchPageWrite(page_id)};
@@ -259,7 +258,7 @@ TEST(PageGuardTest, DtorTest) {
     bpm->GetPages()[frame_id].WUnlatch();
     bpm->GetPages()[frame_id].WLatch();
   }
-  { // The same to read
+  {  // The same to read
     page_id_t page_id{0};
     frame_id_t frame_id{0};
     auto p{bpm->FetchPageRead(page_id)};
@@ -385,7 +384,7 @@ TEST(PageGuardTest, MoveTest) {
   auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
   auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
 
-  Page* pagesp[6];
+  Page *pagesp[6];
   int indies[6];
   for (int i = 0; i < 6; i++) {
     pagesp[i] = bpm->NewPage(indies + i);

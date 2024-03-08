@@ -131,10 +131,16 @@ class ExtendibleHTableBucketPage {
    */
   void PrintBucket() const;
 
+  /**
+   * Append key value pair with out check.
+   */
+  void Append(const KeyType &key, const ValueType &value);
+
  private:
   uint32_t size_;
   uint32_t max_size_;
   MappingType array_[HTableBucketArraySize(sizeof(MappingType))];
 };
+template class ExtendibleHTableBucketPage<GenericKey<8>, int, GenericComparator<8>>;
 
 }  // namespace bustub

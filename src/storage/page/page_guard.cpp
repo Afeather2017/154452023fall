@@ -1,14 +1,15 @@
 #include "storage/page/page_guard.h"
+#include <fmt/format.h>
 #include <algorithm>
+#include <string>
 #include "buffer/buffer_pool_manager.h"
 #include "common/macros.h"
-#include <string>
-#include <fmt/format.h>
 
 namespace bustub {
 
 BasicPageGuard::BasicPageGuard() {
-  MEM_CALL(); (void)bpm_;
+  MEM_CALL();
+  (void)bpm_;
 }
 BasicPageGuard::BasicPageGuard(BufferPoolManager *bpm, Page *page) : bpm_(bpm), page_(page) {
   MEM_CALL(bpm, page);
@@ -18,8 +19,8 @@ BasicPageGuard::BasicPageGuard(BufferPoolManager *bpm, Page *page) : bpm_(bpm), 
 
 BasicPageGuard::BasicPageGuard(BasicPageGuard &&that) noexcept {
   MEM_CALL(bpm_, page_, &that, that.bpm_, that.page_);
-  ENSURE((that.bpm_ == nullptr && that.page_ == nullptr) || 
-      (that.bpm_ != nullptr && that.page_ != nullptr && that.page_->GetPinCount() > 0));
+  ENSURE((that.bpm_ == nullptr && that.page_ == nullptr) ||
+         (that.bpm_ != nullptr && that.page_ != nullptr && that.page_->GetPinCount() > 0));
   bpm_ = that.bpm_;
   page_ = that.page_;
   is_dirty_ = that.is_dirty_;
@@ -30,8 +31,7 @@ BasicPageGuard::BasicPageGuard(BasicPageGuard &&that) noexcept {
 
 void BasicPageGuard::Drop() {
   MEM_CALL();
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
     return;
   }
@@ -43,8 +43,7 @@ void BasicPageGuard::Drop() {
 
 auto BasicPageGuard::GetDataMut() -> char * {
   MEM_CALL();
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
     return nullptr;
   }
@@ -54,8 +53,7 @@ auto BasicPageGuard::GetDataMut() -> char * {
 
 auto BasicPageGuard::GetData() -> const char * {
   MEM_CALL();
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
     return nullptr;
   }
@@ -64,8 +62,7 @@ auto BasicPageGuard::GetData() -> const char * {
 
 auto BasicPageGuard::PageId() -> page_id_t {
   MEM_CALL();
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
     return INVALID_PAGE_ID;
   }
@@ -74,10 +71,9 @@ auto BasicPageGuard::PageId() -> page_id_t {
 
 auto BasicPageGuard::operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard & {
   MEM_CALL(&that);
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
-  ENSURE((that.bpm_ == nullptr && that.page_ == nullptr) || 
-      (that.bpm_ != nullptr && that.page_ != nullptr && that.page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((that.bpm_ == nullptr && that.page_ == nullptr) ||
+         (that.bpm_ != nullptr && that.page_ != nullptr && that.page_->GetPinCount() > 0));
   if (bpm_ != nullptr) {
     Drop();
   }
@@ -95,8 +91,7 @@ auto BasicPageGuard::UpgradeRead() -> ReadPageGuard {
   // Should I mark dirty?
   // No. Release *this cause it save to page obj in bpm.
   // But we need to Pin again, so fetched here.
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
     return {};
   }
@@ -111,8 +106,7 @@ auto BasicPageGuard::UpgradeWrite() -> WritePageGuard {
   MEM_CALL();
   // Should I mark dirty and Pin again?
   // Refer to ::UpgradeRead()
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
     return {};
   }
@@ -125,43 +119,38 @@ auto BasicPageGuard::UpgradeWrite() -> WritePageGuard {
 
 BasicPageGuard::~BasicPageGuard() {
   MEM_CALL();
-  ENSURE((bpm_ == nullptr && page_ == nullptr) || 
-    (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
+  ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   Drop();
 };
 
 ReadPageGuard::ReadPageGuard() {
-  MEM_CALL(); (void)guard_;
+  MEM_CALL();
+  (void)guard_;
 }
 
 ReadPageGuard::ReadPageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {
   MEM_CALL();
   ENSURE(bpm != nullptr && page != nullptr);
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-    || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
 }
 
 // guard_ will call BasicPageGuard(BasicPageGuard &&that), which cleans the values.
 ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept {
   MEM_CALL(&that);
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-    || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   ENSURE((that.guard_.bpm_ == nullptr && that.guard_.page_ == nullptr) ||
-      (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr
-        && that.guard_.page_->GetPinCount() > 0));
+         (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr && that.guard_.page_->GetPinCount() > 0));
   guard_ = std::move(that.guard_);
 }
 
 auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & {
   MEM_CALL(&that);
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-    || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   ENSURE((that.guard_.bpm_ == nullptr && that.guard_.page_ == nullptr) ||
-      (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr
-        && that.guard_.page_->GetPinCount() > 0));
+         (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr && that.guard_.page_->GetPinCount() > 0));
   // Never forgot to drop the original one.
   if (guard_.bpm_ != nullptr) {
     Drop();
@@ -172,9 +161,8 @@ auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & 
 
 void ReadPageGuard::Drop() {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-    || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return;
   }
@@ -184,9 +172,8 @@ void ReadPageGuard::Drop() {
 
 auto ReadPageGuard::PageId() -> page_id_t {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return INVALID_PAGE_ID;
   }
@@ -195,19 +182,18 @@ auto ReadPageGuard::PageId() -> page_id_t {
 
 auto ReadPageGuard::GetData() -> const char * {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return nullptr;
   }
-  return guard_.GetData(); }
+  return guard_.GetData();
+}
 
 ReadPageGuard::~ReadPageGuard() {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return;
   }
@@ -215,33 +201,30 @@ ReadPageGuard::~ReadPageGuard() {
 }
 
 WritePageGuard::WritePageGuard() {
-  MEM_CALL(); (void)guard_;
+  MEM_CALL();
+  (void)guard_;
 }
 
 WritePageGuard::WritePageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {
   MEM_CALL();
   ENSURE(bpm != nullptr && page != nullptr);
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
 }
 
 WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept {
   MEM_CALL(&that);
   ENSURE((that.guard_.bpm_ == nullptr && that.guard_.page_ == nullptr) ||
-      (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr
-        && that.guard_.page_->GetPinCount() > 0));
+         (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr && that.guard_.page_->GetPinCount() > 0));
   guard_ = std::move(that.guard_);
 }
 
 auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard & {
   MEM_CALL(&that);
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-    || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   ENSURE((that.guard_.bpm_ == nullptr && that.guard_.page_ == nullptr) ||
-      (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr
-        && that.guard_.page_->GetPinCount() > 0));
+         (that.guard_.bpm_ != nullptr && that.guard_.page_ != nullptr && that.guard_.page_->GetPinCount() > 0));
   // Never forgot to drop the original one.
   if (guard_.bpm_ != nullptr) {
     Drop();
@@ -252,9 +235,8 @@ auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard
 
 void WritePageGuard::Drop() {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return;
   }
@@ -264,9 +246,8 @@ void WritePageGuard::Drop() {
 
 auto WritePageGuard::PageId() -> page_id_t {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return INVALID_PAGE_ID;
   }
@@ -275,9 +256,8 @@ auto WritePageGuard::PageId() -> page_id_t {
 
 auto WritePageGuard::GetData() -> const char * {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return nullptr;
   }
@@ -286,9 +266,8 @@ auto WritePageGuard::GetData() -> const char * {
 
 auto WritePageGuard::GetDataMut() -> char * {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return nullptr;
   }
@@ -297,9 +276,8 @@ auto WritePageGuard::GetDataMut() -> char * {
 
 WritePageGuard::~WritePageGuard() {
   MEM_CALL();
-  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) 
-      || (guard_.bpm_ != nullptr && guard_.page_ != nullptr
-        && guard_.page_->GetPinCount() > 0));
+  ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
+         (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
     return;
   }
