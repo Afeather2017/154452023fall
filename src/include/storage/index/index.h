@@ -190,3 +190,5 @@ class Index {
 };
 
 }  // namespace bustub
+
+template class std::unique_ptr<bustub::Index>;

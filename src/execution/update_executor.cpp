@@ -19,10 +19,16 @@ UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *
                                std::unique_ptr<AbstractExecutor> &&child_executor)
     : AbstractExecutor(exec_ctx) {
   // As of Fall 2022, you DON'T need to implement update executor to have perfect score in project 3 / project 4.
+  Catalog *catalog{exec_ctx_->GetCatalog()};
+  table_info_ = catalog->GetTable(plan_->table_oid_);
+  indices_ = catalog->GetTableIndexes(table_info_->name_);
+  txn_ = exec_ctx_->GetTransaction();
 }
 
-void UpdateExecutor::Init() { throw NotImplementedException("UpdateExecutor is not implemented"); }
+void UpdateExecutor::Init() {}
 
-auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool { return false; }
+auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
+  return false;
+}
 
 }  // namespace bustub
