@@ -14,9 +14,12 @@
 
 #include <memory>
 #include <utility>
+#include <span>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/plans/seq_scan_plan.h"
+#include "execution/plans/values_plan.h"
 #include "execution/plans/insert_plan.h"
 #include "storage/table/tuple.h"
 
@@ -55,8 +58,38 @@ class InsertExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); };
 
  private:
+
+  /**
+   * Insert the indices from tuple.
+   */
+  void InsertIndices(std::vector<Value> &v, RID rid, Transaction *txn);
+
+  /**
+   * Insert by ValuePlanNode
+   */
+  auto InsertByValue(const ValuesPlanNode *node, Tuple *tuple) -> int;
+
+  /**
+   * Insert by SeqScanNode
+   */
+  auto InsertByScan(const SeqScanPlanNode* node, Tuple *tuple) -> int;
+
+  /**
+   * Insert a tuple.
+   */
+  auto InsertATuple(Tuple & tuple) -> RID;
+
   /** The insert plan node to be executed*/
   const InsertPlanNode *plan_;
+
+  TableInfo *table_info_;
+  std::vector<IndexInfo *> indices_;
+
+  const AbstractPlanNode *node_;
+  Transaction* txn_;
+  
+  /** The schema for return a value */
+  Schema return_schema_;
 };
 
 }  // namespace bustub
