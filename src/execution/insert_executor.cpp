@@ -36,7 +36,7 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
 void InsertExecutor::Init() {}
 
 void InsertExecutor::InsertIndices(std::vector<Value> &v, RID rid, Transaction *txn) {
-  // For each indices, which could be composite indices.
+  // For-each indices, which could be composite indices.
   for (const auto &i : indices_) {
     std::vector<Value> index;
     index.reserve(i->key_schema_.GetColumnCount());
