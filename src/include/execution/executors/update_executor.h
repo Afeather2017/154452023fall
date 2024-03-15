@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -58,6 +59,14 @@ class UpdateExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
  private:
+  /** Update indices
+   *  @param new_v the tuple inserted.
+   *  @param old_v the tuple must be removed.
+   *  @param rid the corresponding rid.
+   *  @param txn the transaction.
+   */
+  void UpdateIndices(std::vector<Value> &new_v, std::vector<Value> &old_v, RID rid, Transaction *txn);
+
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;
 
