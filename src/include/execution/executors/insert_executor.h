@@ -18,6 +18,7 @@
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/plans/projection_plan.h"
 #include "execution/plans/seq_scan_plan.h"
 #include "execution/plans/values_plan.h"
 #include "execution/plans/insert_plan.h"
@@ -65,16 +66,6 @@ class InsertExecutor : public AbstractExecutor {
   void InsertIndices(std::vector<Value> &v, RID rid, Transaction *txn);
 
   /**
-   * Insert by ValuePlanNode
-   */
-  auto InsertByValue(const ValuesPlanNode *node, Tuple *tuple) -> int;
-
-  /**
-   * Insert by SeqScanNode
-   */
-  auto InsertByScan(const SeqScanPlanNode* node, Tuple *tuple) -> int;
-
-  /**
    * Insert a tuple.
    */
   auto InsertATuple(Tuple & tuple) -> RID;
@@ -90,6 +81,7 @@ class InsertExecutor : public AbstractExecutor {
   
   /** The schema for return a value */
   Schema return_schema_;
+  std::unique_ptr<AbstractExecutor> child_executor_;
 };
 
 }  // namespace bustub
