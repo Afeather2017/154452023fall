@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//          
 //
 //                         BusTub
 //
@@ -18,10 +18,55 @@ namespace bustub {
 
 DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx),
+      plan_{plan},
+      child_executor_{std::move(child_executor)} {
+  Catalog *catalog{exec_ctx_->GetCatalog()};
+  table_info_ = catalog->GetTable(plan_->table_oid_);
+  indices_ = catalog->GetTableIndexes(table_info_->name_);
+  txn_ = exec_ctx_->GetTransaction();
+}
 
-void DeleteExecutor::Init() { throw NotImplementedException("DeleteExecutor is not implemented"); }
+void DeleteExecutor::Init() {
+  child_executor_->Init();
+}
 
-auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool { return false; }
+void DeleteExecutor::DeleteIndices(std::vector<Value> &old_v, RID rid, Transaction *txn) {
+  // For-each indices, which could be composite indices.
+  for (const auto &i : indices_) {
+    std::vector<Value> old_i;
+    old_i.reserve(i->key_schema_.GetColumnCount());
+    for (const auto &column : i->key_schema_.GetColumns()) {
+      auto idx{table_info_->schema_.GetColIdx(column.GetName())};
+      old_i.push_back(old_v[idx]);
+    }
+    Tuple old_t{old_i, &i->key_schema_};
+    i->index_->DeleteEntry(old_t, rid, txn);
+  }
+}
+
+auto DeleteExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
+  if (table_info_ == nullptr) {
+    return false;
+  }
+  int line_updated{0};
+  std::vector<Value> old_v(table_info_->schema_.GetColumnCount());
+  for (; child_executor_->Next(tuple, rid); line_updated++) {
+    for (uint32_t i = 0; i < table_info_->schema_.GetColumnCount(); i++) {
+      old_v[i] = tuple->GetValue(&table_info_->schema_, i);
+    }
+
+    TupleMeta meta{table_info_->table_->GetTupleMeta(*rid)};
+    meta.is_deleted_ = true;
+    table_info_->table_->UpdateTupleMeta(meta, *rid);
+
+    // And update indices.
+    DeleteIndices(old_v, *rid, txn_);
+  }
+  Value size{TypeId::INTEGER, line_updated};
+  *tuple = Tuple{std::vector{size}, &plan_->OutputSchema()};
+  table_info_ = nullptr;
+  return true;
+}
 
 }  // namespace bustub
