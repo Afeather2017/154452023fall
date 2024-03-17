@@ -44,5 +44,11 @@ class IndexScanExecutor : public AbstractExecutor {
  private:
   /** The index scan plan node to be executed. */
   const IndexScanPlanNode *plan_;
+
+  TableInfo *table_info_;
+
+  HashTableIndexForTwoIntegerColumn* index_;
+
+
 };
 }  // namespace bustub

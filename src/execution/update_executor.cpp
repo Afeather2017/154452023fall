@@ -56,7 +56,6 @@ auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (table_info_ == nullptr) {
     return false;
   }
-  TupleMeta meta;
   int line_updated{0};
   std::vector<Value> new_v(table_info_->schema_.GetColumnCount());
   std::vector<Value> old_v(table_info_->schema_.GetColumnCount());
@@ -66,10 +65,19 @@ auto UpdateExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       new_v[i] = plan_->target_expressions_[i]->Evaluate(tuple, table_info_->schema_);
     }
     *tuple = Tuple{new_v, &table_info_->schema_};
-    table_info_->table_->UpdateTupleInPlace(meta, *tuple, *rid);
+
+    TupleMeta meta{table_info_->table_->GetTupleMeta(*rid)};
+    meta.is_deleted_ = true;
+    table_info_->table_->UpdateTupleMeta(meta, *rid);
+
+    meta = TupleMeta{};
+    auto result{table_info_->table_->InsertTuple(meta, *tuple)};
+    if (!result.has_value()) {
+      throw Exception("Tuple too large");
+    }
 
     // And update indices.
-    UpdateIndices(new_v, old_v, *rid, txn_);
+    UpdateIndices(new_v, old_v, *result, txn_);
   }
   Value size{TypeId::INTEGER, line_updated};
   *tuple = Tuple{std::vector{size}, &plan_->OutputSchema()};

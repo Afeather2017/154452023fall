@@ -10,6 +10,8 @@
 #include "catalog/catalog.h"
 #include "concurrency/transaction.h"
 #include "execution/expressions/abstract_expression.h"
+#include "execution/expressions/column_value_expression.h"
+#include "execution/expressions/constant_value_expression.h"
 #include "execution/plans/abstract_plan.h"
 
 namespace bustub {
@@ -106,6 +108,41 @@ class Optimizer {
    * @return std::optional<size_t>
    */
   auto EstimatedCardinality(const std::string &table_name) -> std::optional<size_t>;
+
+  /**
+   * @brief find an indexed column that could be used as index
+   * @param expr the root of Expression AST.
+   * @return bool found or not.
+   */
+  auto FindAnIndexRecursively(const AbstractExpression *expr) -> bool;
+
+  /**
+   * @brief get the type of expr.
+   * @param expr
+   * @return ValueExpressionType the type we interested.
+   */
+  enum class ValueExpressionType { UNKNOW, CONST_VALUE, COLUMN_VALUE };
+  auto GetValueExpressionType(const AbstractExpression *expr) -> ValueExpressionType;
+
+  /**
+   * @param expr
+   * @return int -1 not found otherwise index id;
+   */
+  auto FindIndex(const ColumnValueExpression *expr) -> int;
+  
+  /** the mapping from column index to index id */
+  std::vector<int> index_id_;
+
+  /** The result of FindAnIndexRecursively */
+  index_oid_t found_index_id_;
+  ConstantValueExpression *pred_key_;
+
+  /** The counter for fxxking limited to 1 equality expression rule */
+  int eq_count_ = 0;
+
+  /** The value used by FindAnIndexRecursively */
+  std::vector<IndexInfo *> indices_;
+  TableInfo *table_;
 
   /** Catalog will be used during the planning process. USERS SHOULD ENSURE IT OUTLIVES
    * OPTIMIZER, otherwise it's a dangling reference.
