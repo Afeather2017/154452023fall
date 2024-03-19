@@ -52,7 +52,8 @@ void InsertExecutor::InsertIndices(std::vector<Value> &v, RID rid, Transaction *
 }
 
 auto InsertExecutor::InsertATuple(Tuple & tuple) -> RID {
-  TupleMeta meta;
+  TupleMeta meta{};
+  // BUSTUB_ASSERT(meta.is_deleted_ != true, "meta shall be false");
   auto result{table_info_->table_->InsertTuple(meta, tuple)};
   if (!result.has_value()) {
     throw Exception("Tuple too large");
@@ -72,6 +73,7 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     for (uint32_t i = 0; i < table_info_->schema_.GetColumnCount(); i++) {
       v[i] = tuple->GetValue(&table_info_->schema_, i);
     }
+    fmt::println("Insert {}\n", v[1]);
     InsertIndices(v, *rid, txn_);
   }
   Value size{TypeId::INTEGER, line_inserted};
