@@ -73,7 +73,6 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     for (uint32_t i = 0; i < table_info_->schema_.GetColumnCount(); i++) {
       v[i] = tuple->GetValue(&table_info_->schema_, i);
     }
-    fmt::println("Insert {}\n", v[1]);
     InsertIndices(v, *rid, txn_);
   }
   Value size{TypeId::INTEGER, line_inserted};
