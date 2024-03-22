@@ -35,6 +35,8 @@ AggregationExecutor::AggregationExecutor(ExecutorContext *exec_ctx, const Aggreg
 
 void AggregationExecutor::Init() {
   // FIXME: pipeline breakers.
+  aht_.Clear();
+  aht_iterator_ = aht_.End();
   child_executor_->Init();
   Tuple tuple;
   RID rid;
