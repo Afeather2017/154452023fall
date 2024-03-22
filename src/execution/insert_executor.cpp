@@ -33,7 +33,9 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
   txn_ = exec_ctx_->GetTransaction();
 }
 
-void InsertExecutor::Init() {}
+void InsertExecutor::Init() {
+  child_executor_->Init();
+}
 
 void InsertExecutor::InsertIndices(std::vector<Value> &v, RID rid, Transaction *txn) {
   // For-each indices, which could be composite indices.
