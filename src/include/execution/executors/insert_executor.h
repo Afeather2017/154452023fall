@@ -13,15 +13,15 @@
 #pragma once
 
 #include <memory>
-#include <utility>
 #include <span>
+#include <utility>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/plans/insert_plan.h"
 #include "execution/plans/projection_plan.h"
 #include "execution/plans/seq_scan_plan.h"
 #include "execution/plans/values_plan.h"
-#include "execution/plans/insert_plan.h"
 #include "storage/table/tuple.h"
 
 namespace bustub {
@@ -59,7 +59,6 @@ class InsertExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); };
 
  private:
-
   /**
    * Insert the indices from tuple.
    */
@@ -68,7 +67,7 @@ class InsertExecutor : public AbstractExecutor {
   /**
    * Insert a tuple.
    */
-  auto InsertATuple(Tuple & tuple) -> RID;
+  auto InsertATuple(Tuple &tuple) -> RID;
 
   /** The insert plan node to be executed*/
   const InsertPlanNode *plan_;
@@ -77,8 +76,8 @@ class InsertExecutor : public AbstractExecutor {
   std::vector<IndexInfo *> indices_;
 
   const AbstractPlanNode *node_;
-  Transaction* txn_;
-  
+  Transaction *txn_;
+
   /** The schema for return a value */
   Schema return_schema_;
   std::unique_ptr<AbstractExecutor> child_executor_;

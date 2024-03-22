@@ -62,7 +62,7 @@ class DeleteExecutor : public AbstractExecutor {
    *  @param txn the transaction.
    */
   void DeleteIndices(std::vector<Value> &old_v, RID rid, Transaction *txn);
-  
+
   /** The delete plan node to be executed */
   const DeletePlanNode *plan_;
 
@@ -73,7 +73,7 @@ class DeleteExecutor : public AbstractExecutor {
   const TableInfo *table_info_;
 
   /** Indices coresponding the table */
-  std::vector<IndexInfo*> indices_;
+  std::vector<IndexInfo *> indices_;
 
   /** The update transaction */
   Transaction *txn_;

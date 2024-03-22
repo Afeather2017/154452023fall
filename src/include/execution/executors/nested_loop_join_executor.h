@@ -77,9 +77,7 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
   Tuple ltuple_, rtuple_;
 
   /** the status of this executor */
-  enum class Status {
-    Init, AllNotDone, RightDone
-  } status_;
+  enum class Status { Init, AllNotDone, RightDone } status_;
 
   /** right table matched or not */
   bool right_matched_{false};

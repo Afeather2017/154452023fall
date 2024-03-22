@@ -9,9 +9,9 @@
 // Copyright (c) 2015-2021, Carnegie Mellon University Database Group
 //
 //===----------------------------------------------------------------------===//
+#include <algorithm>
 #include <memory>
 #include <vector>
-#include <algorithm>
 
 #include "execution/executors/aggregation_executor.h"
 #include "execution/expressions/column_value_expression.h"
@@ -25,7 +25,8 @@ AggregationExecutor::AggregationExecutor(ExecutorContext *exec_ctx, const Aggreg
       child_executor_{std::move(child_executor)},
       aht_{plan_->aggregates_, plan_->agg_types_},
       aht_iterator_{aht_.End()} {
-  BUSTUB_ASSERT(plan_->aggregates_.size() == plan_->agg_types_.size(), "number of aggregate function not match its type.");
+  BUSTUB_ASSERT(plan_->aggregates_.size() == plan_->agg_types_.size(),
+                "number of aggregate function not match its type.");
   // min(v1+v2) contains children.
   // BUSTUB_ASSERT(std::all_of(plan_->aggregates_.begin(), plan_->aggregates_.end(),
   //       [](const std::shared_ptr<AbstractExpression> &expr) {
@@ -53,7 +54,6 @@ void AggregationExecutor::Init() {
 }
 
 void AggregationExecutor::ExtractKeyValue(Tuple *tuple) {
-
   auto key = aht_iterator_.Key();
   auto value = aht_iterator_.Val();
   auto child_schema = child_executor_->GetOutputSchema();
@@ -73,7 +73,7 @@ void AggregationExecutor::ExtractKeyValue(Tuple *tuple) {
   *tuple = Tuple{result, &output_schema};
 }
 
-auto AggregationExecutor::Next(Tuple *tuple, RID *rid) -> bool { 
+auto AggregationExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (plan_ == nullptr) {
     return false;
   }

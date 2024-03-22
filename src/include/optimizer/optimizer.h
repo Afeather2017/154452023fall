@@ -129,7 +129,7 @@ class Optimizer {
    * @return int -1 not found otherwise index id;
    */
   auto FindIndex(const ColumnValueExpression *expr) -> int;
-  
+
   /** the mapping from column index to index id */
   std::vector<int> index_id_;
 

@@ -14,13 +14,11 @@
 
 namespace bustub {
 IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan)
-    : AbstractExecutor(exec_ctx),
-      plan_{plan} {
-
+    : AbstractExecutor(exec_ctx), plan_{plan} {
   Catalog *catalog{exec_ctx_->GetCatalog()};
   table_info_ = catalog->GetTable(plan_->table_oid_);
   auto index_info = catalog->GetTableIndexes(table_info_->name_);
-  for (auto & index : index_info) {
+  for (auto &index : index_info) {
     if (index->index_oid_ == plan_->index_oid_) {
       index_ = dynamic_cast<HashTableIndexForTwoIntegerColumn *>(index->index_.get());
       break;

@@ -76,7 +76,7 @@ class SimpleAggregationHashTable {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
       switch (agg_types_[i]) {
         case AggregationType::CountStarAggregate:
-          if (result->aggregates_[i].IsNull()){
+          if (result->aggregates_[i].IsNull()) {
             temp = one;
           } else {
             temp = result->aggregates_[i].Add(one);
@@ -87,7 +87,7 @@ class SimpleAggregationHashTable {
           if (input.aggregates_[i].IsNull()) {
             break;
           }
-          if (result->aggregates_[i].IsNull()){
+          if (result->aggregates_[i].IsNull()) {
             temp = one;
           } else {
             temp = result->aggregates_[i].Add(one);
@@ -98,7 +98,7 @@ class SimpleAggregationHashTable {
           if (input.aggregates_[i].IsNull()) {
             break;
           }
-          if (result->aggregates_[i].IsNull()){
+          if (result->aggregates_[i].IsNull()) {
             temp = input.aggregates_[i];
           } else {
             temp = result->aggregates_[i].Add(input.aggregates_[i]);
@@ -109,7 +109,7 @@ class SimpleAggregationHashTable {
           if (input.aggregates_[i].IsNull()) {
             break;
           }
-          if (result->aggregates_[i].IsNull()){
+          if (result->aggregates_[i].IsNull()) {
             temp = input.aggregates_[i];
           } else {
             temp = result->aggregates_[i].Min(input.aggregates_[i]);
@@ -120,7 +120,7 @@ class SimpleAggregationHashTable {
           if (input.aggregates_[i].IsNull()) {
             break;
           }
-          if (result->aggregates_[i].IsNull()){
+          if (result->aggregates_[i].IsNull()) {
             temp = input.aggregates_[i];
           } else {
             temp = result->aggregates_[i].Max(input.aggregates_[i]);

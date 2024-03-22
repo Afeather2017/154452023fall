@@ -16,7 +16,7 @@
 namespace bustub {
 
 SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
-  : AbstractExecutor(exec_ctx), plan_{plan}, iter_{nullptr} {}
+    : AbstractExecutor(exec_ctx), plan_{plan}, iter_{nullptr} {}
 
 void SeqScanExecutor::Init() {
   Catalog *catalog{exec_ctx_->GetCatalog()};

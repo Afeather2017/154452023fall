@@ -4,25 +4,23 @@
 #include <vector>
 #include "common/macros.h"
 #include "execution/expressions/comparison_expression.h"
-#include "optimizer/optimizer.h"
 #include "execution/plans/index_scan_plan.h"
 #include "execution/plans/seq_scan_plan.h"
+#include "optimizer/optimizer.h"
 
 namespace bustub {
 
 auto Optimizer::GetValueExpressionType(const AbstractExpression *expr) -> ValueExpressionType {
-  if (dynamic_cast<const ConstantValueExpression*>(expr) != nullptr) {
+  if (dynamic_cast<const ConstantValueExpression *>(expr) != nullptr) {
     return ValueExpressionType::CONST_VALUE;
   }
-  if (dynamic_cast<const ColumnValueExpression*>(expr) != nullptr) {
+  if (dynamic_cast<const ColumnValueExpression *>(expr) != nullptr) {
     return ValueExpressionType::COLUMN_VALUE;
   }
   return ValueExpressionType::UNKNOW;
 }
 
-auto Optimizer::FindIndex(const ColumnValueExpression *expr) -> int {
-  return index_id_[expr->GetColIdx()];
-}
+auto Optimizer::FindIndex(const ColumnValueExpression *expr) -> int { return index_id_[expr->GetColIdx()]; }
 
 auto Optimizer::FindAnIndexRecursively(const AbstractExpression *expr) -> bool {
   if (expr->children_.size() == 1) {
@@ -85,7 +83,7 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const bustub::AbstractPlanNodeRef &pl
 
     // initialize FindIndex.
     index_id_.resize(table_->schema_.GetColumnCount(), -1);
-    for (auto & index : indices_) {
+    for (auto &index : indices_) {
       if (index->key_schema_.GetColumnCount() != 1) {
         throw Exception("Unsupported combinition index");
       }
@@ -94,14 +92,10 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const bustub::AbstractPlanNodeRef &pl
 
     BUSTUB_ASSERT(seq_scan_plan.filter_predicate_->children_.size() != 1, "the predicate must contains 1 child");
     if (FindAnIndexRecursively(seq_scan_plan.filter_predicate_.get()) && eq_count_ == 1) {
-      return std::make_shared<IndexScanPlanNode>(
-          optimized_plan->output_schema_,
-          table_->oid_, found_index_id_,
-          seq_scan_plan.filter_predicate_, 
-          pred_key_
-          );
+      return std::make_shared<IndexScanPlanNode>(optimized_plan->output_schema_, table_->oid_, found_index_id_,
+                                                 seq_scan_plan.filter_predicate_, pred_key_);
     }
-  } 
+  }
   return plan;
 }
 

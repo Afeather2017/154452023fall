@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//          
+//===----------------------------------------------------------------------===//
 //
 //                         BusTub
 //
@@ -18,18 +18,14 @@ namespace bustub {
 
 DeleteExecutor::DeleteExecutor(ExecutorContext *exec_ctx, const DeletePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx),
-      plan_{plan},
-      child_executor_{std::move(child_executor)} {
+    : AbstractExecutor(exec_ctx), plan_{plan}, child_executor_{std::move(child_executor)} {
   Catalog *catalog{exec_ctx_->GetCatalog()};
   table_info_ = catalog->GetTable(plan_->table_oid_);
   indices_ = catalog->GetTableIndexes(table_info_->name_);
   txn_ = exec_ctx_->GetTransaction();
 }
 
-void DeleteExecutor::Init() {
-  child_executor_->Init();
-}
+void DeleteExecutor::Init() { child_executor_->Init(); }
 
 void DeleteExecutor::DeleteIndices(std::vector<Value> &old_v, RID rid, Transaction *txn) {
   // For-each indices, which could be composite indices.

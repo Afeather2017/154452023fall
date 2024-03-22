@@ -17,9 +17,7 @@ namespace bustub {
 
 UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx),
-      plan_{plan},
-      child_executor_{std::move(child_executor)} {
+    : AbstractExecutor(exec_ctx), plan_{plan}, child_executor_{std::move(child_executor)} {
   // As of Fall 2022, you DON'T need to implement update executor to have perfect score in project 3 / project 4.
   Catalog *catalog{exec_ctx_->GetCatalog()};
   table_info_ = catalog->GetTable(plan_->table_oid_);
@@ -27,9 +25,7 @@ UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *
   txn_ = exec_ctx_->GetTransaction();
 }
 
-void UpdateExecutor::Init() {
-  child_executor_->Init();
-}
+void UpdateExecutor::Init() { child_executor_->Init(); }
 
 void UpdateExecutor::UpdateIndices(std::vector<Value> &new_v, std::vector<Value> &old_v, RID rid, Transaction *txn) {
   // For-each indices, which could be composite indices.
