@@ -53,8 +53,36 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); };
 
  private:
+  /** @brief connect left tuple and right tuple */
+  void BuildTuple(Tuple *result, Tuple *left, Tuple *right);
+
+  /** @brief Get a tuple from right table if could, and check the connected one.
+   *  @return true if geted a valid one, false if rexec reached end.
+   */
+  auto GetTuple(Tuple *result, Tuple *ltuple, Tuple *rtuple) -> bool;
+
+  /** @brief Check the output_shcema, refer to InferJoinSchema */
+  auto CheckSchema(const Schema &target, const Schema &left, const Schema &right) -> bool;
+
+  /** @brief Get a tuple with right filled with null */
+  void RightEmpty(Tuple *result, Tuple *left);
+
   /** The NestedLoopJoin plan node to be executed. */
   const NestedLoopJoinPlanNode *plan_;
+
+  /** Two executor to use */
+  std::unique_ptr<AbstractExecutor> lexec_, rexec_;
+
+  /** left tuple */
+  Tuple ltuple_, rtuple_;
+
+  /** the status of this executor */
+  enum class Status {
+    Init, AllNotDone, RightDone
+  } status_;
+
+  /** right table matched or not */
+  bool right_matched_{false};
 };
 
 }  // namespace bustub
