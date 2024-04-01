@@ -58,7 +58,7 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const bustub::AbstractPlanNodeRef &pl
   // TODO(student): implement seq scan with predicate -> index scan optimizer rule
   std::vector<AbstractPlanNodeRef> children;
   for (const auto &child : plan->GetChildren()) {
-    children.emplace_back(OptimizeMergeFilterScan(child));
+    children.emplace_back(OptimizeSeqScanAsIndexScan(child));
   }
 
   auto optimized_plan = plan->CloneWithChildren(std::move(children));
@@ -66,7 +66,7 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const bustub::AbstractPlanNodeRef &pl
   if (optimized_plan->GetType() == PlanType::SeqScan) {
     const auto &seq_scan_plan = dynamic_cast<const SeqScanPlanNode &>(*optimized_plan);
     if (seq_scan_plan.filter_predicate_ == nullptr) {
-      return plan;
+      return optimized_plan;
     }
     indices_ = catalog_.GetTableIndexes(seq_scan_plan.table_name_);
     table_ = catalog_.GetTable(seq_scan_plan.table_oid_);
@@ -81,12 +81,15 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const bustub::AbstractPlanNodeRef &pl
     }
 
     BUSTUB_ASSERT(seq_scan_plan.filter_predicate_->children_.size() != 1, "the predicate must contains 1 child");
+    if (seq_scan_plan.filter_predicate_->children_.empty()) {
+      return optimized_plan;
+    }
     if (FindAnIndexRecursively(seq_scan_plan.filter_predicate_.get()) && eq_count_ == 1) {
       return std::make_shared<IndexScanPlanNode>(optimized_plan->output_schema_, table_->oid_, found_index_id_,
                                                  seq_scan_plan.filter_predicate_, pred_key_);
     }
   }
-  return plan;
+  return optimized_plan;
 }
 
 }  // namespace bustub
