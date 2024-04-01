@@ -120,8 +120,7 @@ class JoinHashTable {
 
  private:
   // change to unordered_map<key, []>. Tree type in gcc 13.2.1 could cause bugs.
-  // std::unordered_map<JoinKey, std::vector<Tuple>> map_;
-  std::map<JoinKey, std::vector<Tuple>> map_;
+  std::unordered_map<JoinKey, std::vector<Tuple>> map_;
 };
 
 /**
