@@ -10,16 +10,6 @@
 
 namespace bustub {
 
-auto Optimizer::GetValueExpressionType(const AbstractExpression *expr) -> ValueExpressionType {
-  if (dynamic_cast<const ConstantValueExpression *>(expr) != nullptr) {
-    return ValueExpressionType::CONST_VALUE;
-  }
-  if (dynamic_cast<const ColumnValueExpression *>(expr) != nullptr) {
-    return ValueExpressionType::COLUMN_VALUE;
-  }
-  return ValueExpressionType::UNKNOW;
-}
-
 auto Optimizer::FindIndex(const ColumnValueExpression *expr) -> int { return index_id_[expr->GetColIdx()]; }
 
 auto Optimizer::FindAnIndexRecursively(const AbstractExpression *expr) -> bool {

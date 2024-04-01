@@ -53,6 +53,10 @@ void NestedLoopJoinExecutor::Init() {
 }
 
 void NestedLoopJoinExecutor::BuildTuple(Tuple *result, Tuple *left, Tuple *right) {
+  // In plan_node.h:
+  // auto NestedLoopJoinPlanNode::InferJoinSchema(const AbstractPlanNode &left, const AbstractPlanNode &right) -> Schema;
+  // Go through the codes, it just connect left and right schema together.
+  // So we build value like this.
   std::vector<Value> values(plan_->OutputSchema().GetColumnCount());
   for (uint32_t i = 0; i < lexec_->GetOutputSchema().GetColumns().size(); i++) {
     values[i] = left->GetValue(&lexec_->GetOutputSchema(), i);
