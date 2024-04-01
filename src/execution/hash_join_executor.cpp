@@ -36,11 +36,12 @@ void HashJoinExecutor::Init() {
   table_.Clear();
   auto keys_expr = plan_->RightJoinKeyExpressions();
   std::vector<Value> keys(keys_expr.size());
+  JoinKey key{std::move(keys)};
   while (rexec_->Next(&tuple, &rid)) {
-    for (size_t i = 0; i < keys.size(); i++) {
-      keys[i] = keys_expr[i]->Evaluate(&tuple, rexec_->GetOutputSchema());
+    for (size_t i = 0; i < keys_expr.size(); i++) {
+      key.Set(i, keys_expr[i]->Evaluate(&tuple, rexec_->GetOutputSchema()));
     }
-    table_.Insert(JoinKey{keys}, std::move(tuple));
+    table_.Insert(key, std::move(tuple));
     BUSTUB_ASSERT(table_.Size() > 0, "hash table size is incorrect");
   }
   status_ = Status::INIT;
@@ -92,23 +93,12 @@ auto HashJoinExecutor::NextStep(Tuple *tuple, RID *rid) -> char {
     if (result != table_.End()) {
       iter_ = result->second.begin();
       bound_ = result->second.end();
-      status_ = Status::FIRST;
+      status_ = Status::MULTI;
+    } else if (plan_->join_type_ == JoinType::LEFT) {
+      RightEmpty(tuple, &ltuple_);
+      return 'H';
     }
     return 'C';
-  } else if (status_ == Status::FIRST) { // NOLINT
-    if (iter_ == bound_) {
-      // First call, find nothing, but it is left join.
-      status_ = Status::INIT;
-      if (plan_->join_type_ == JoinType::LEFT) {
-        RightEmpty(tuple, &ltuple_);
-        return 'H';
-      }
-      return 'C';
-    }
-    BuildTuple(tuple, &ltuple_, &*iter_);
-    iter_++;
-    status_ = Status::MULTI;
-    return 'H';
   } else if (status_ == Status::MULTI) { // NOLINT
     if (iter_ == bound_) {
       status_ = Status::INIT;

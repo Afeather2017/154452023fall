@@ -49,24 +49,27 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
   // E.g. <column expr> = <column expr> AND <column expr> = <column expr> AND ...
   std::vector<AbstractPlanNodeRef> children;
   for (const auto &child : plan->GetChildren()) {
-    children.emplace_back(OptimizeMergeFilterScan(child));
+    // Why copy here? 
+    //  A plan node could be a tree, so we should recursivly apply this.
+    children.emplace_back(OptimizeNLJAsHashJoin(child));
   }
 
   auto optimized = plan->CloneWithChildren(std::move(children));
 
   if (optimized->GetType() != PlanType::NestedLoopJoin) {
-    return plan;
+    // return optimized since the children are optimized.
+    return optimized;
   }
   auto loop_join_plan = dynamic_cast<const NestedLoopJoinPlanNode *>(optimized.get());
   if (loop_join_plan->predicate_ == nullptr) {
-    return plan;
+    return optimized;
   }
   std::vector<const ComparisonExpression *> comp;
   if (!FindAllEqualExpression(loop_join_plan->Predicate().get(), comp)) {
-    return plan;
+    return optimized;
   }
   if (comp.empty()) {
-    return plan;
+    return optimized;
   }
   // Iterate all and get all 
   std::vector<AbstractExpressionRef> left_expr;

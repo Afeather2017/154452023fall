@@ -169,7 +169,7 @@ class HashJoinExecutor : public AbstractExecutor {
   JoinHashTable table_;
   decltype(table_.End()->second.begin()) iter_, bound_;
   Tuple ltuple_;
-  enum class Status { INIT, FIRST, MULTI } status_;
+  enum class Status { INIT, MULTI } status_;
   std::vector<AbstractExpressionRef> keys_expr_;
   JoinKey keys_;
 };

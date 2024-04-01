@@ -124,7 +124,7 @@ class Optimizer {
    * @param expr
    * @return ValueExpressionType the type we interested.
    */
-  enum class ValueExpressionType { UNKNOW, CONST_VALUE, COLUMN_VALUE, COMP_EXPR, LOGIC_EXPR };
+  enum class ValueExpressionType{ UNKNOW, CONST_VALUE, COLUMN_VALUE, COMP_EXPR, LOGIC_EXPR };
   auto GetValueExpressionType(const AbstractExpression *expr) -> ValueExpressionType {
     if (dynamic_cast<const ConstantValueExpression *>(expr) != nullptr) {
       return ValueExpressionType::CONST_VALUE;
@@ -134,6 +134,9 @@ class Optimizer {
     }
     if (dynamic_cast<const ComparisonExpression *>(expr) != nullptr) {
       return ValueExpressionType::COMP_EXPR;
+    }
+    if (dynamic_cast<const LogicExpression *>(expr) != nullptr) {
+      return ValueExpressionType::LOGIC_EXPR;
     }
     if (dynamic_cast<const LogicExpression *>(expr) != nullptr) {
       return ValueExpressionType::LOGIC_EXPR;
