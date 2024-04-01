@@ -15,6 +15,9 @@
 namespace bustub {
 IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan)
     : AbstractExecutor(exec_ctx), plan_{plan} {
+}
+
+void IndexScanExecutor::Init() {
   Catalog *catalog{exec_ctx_->GetCatalog()};
   table_info_ = catalog->GetTable(plan_->table_oid_);
   auto index_info = catalog->GetTableIndexes(table_info_->name_);
@@ -25,8 +28,6 @@ IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanP
     }
   }
 }
-
-void IndexScanExecutor::Init() {}
 
 auto IndexScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (table_info_ == nullptr) {
