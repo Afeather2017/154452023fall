@@ -45,9 +45,10 @@ auto NestedLoopJoinExecutor::CheckSchema(const Schema &target, const Schema &lef
   }
   return true;
 }
+
 void NestedLoopJoinExecutor::Init() {
-  status_ = Status::Init;
-  right_matched_ = false;
+  status_ = Status::INIT;
+  lexec_->Init();
   BUSTUB_ASSERT(CheckSchema(plan_->OutputSchema(), lexec_->GetOutputSchema(), rexec_->GetOutputSchema()),
                 "Invalid arragement");
 }
@@ -68,7 +69,17 @@ void NestedLoopJoinExecutor::BuildTuple(Tuple *result, Tuple *left, Tuple *right
   *result = Tuple{values, &plan_->OutputSchema()};
 }
 
-auto NestedLoopJoinExecutor::GetTuple(Tuple *result, Tuple *ltuple, Tuple *rtuple) -> bool { return false; }
+auto NestedLoopJoinExecutor::GetTuple(Tuple *result, RID *rid) -> bool {
+  const Schema &lschema{lexec_->GetOutputSchema()};
+  const Schema &rschema{rexec_->GetOutputSchema()};
+  while (rexec_->Next(&rtuple_, rid)) {
+    auto predicate{plan_->Predicate()};
+    if (predicate->EvaluateJoin(&ltuple_, lschema, &rtuple_, rschema).GetAs<bool>()) {
+      return true;
+    }
+  }
+  return false;
+}
 
 void NestedLoopJoinExecutor::RightEmpty(Tuple *result, Tuple *left) {
   std::vector<Value> values(plan_->OutputSchema().GetColumnCount());
@@ -83,49 +94,47 @@ void NestedLoopJoinExecutor::RightEmpty(Tuple *result, Tuple *left) {
   *result = Tuple{values, &plan_->OutputSchema()};
 }
 
-auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
-  const Schema &lschema{lexec_->GetOutputSchema()};
-  const Schema &rschema{rexec_->GetOutputSchema()};
-  // status when get into the loop
-  // 1. left didn't iterate all and right didn't iterate all.
-  // 2. left didn't iterate all and right iterated all.
-  while (true) {
-    if (status_ == Status::Init) {
-      lexec_->Init();
-      rexec_->Init();
-      if (lexec_->Next(&ltuple_, rid)) {
-        status_ = Status::AllNotDone;
-      } else {
-        // left table is empty.
-        return false;
-      }
-    } else if (status_ == Status::RightDone) {
-      if (!lexec_->Next(&ltuple_, rid)) {
-        // left table iterated.
-        return false;
-      }
-      rexec_->Init();
-      right_matched_ = false;
-      status_ = Status::AllNotDone;
+auto NestedLoopJoinExecutor::NextStep(Tuple *tuple, RID *rid) -> char {
+  if (status_ == Status::INIT) {
+    if (!lexec_->Next(&ltuple_, rid)) {
+      return 'S';
     }
-    while (rexec_->Next(&rtuple_, rid)) {
-      if (plan_->Predicate() == nullptr) {
-        throw Exception{"empty predicate"};
-      }
-      auto predicate{plan_->Predicate()};
-      if (predicate->EvaluateJoin(&ltuple_, lschema, &rtuple_, rschema).GetAs<bool>()) {
-        right_matched_ = true;
-        BuildTuple(tuple, &ltuple_, &rtuple_);
-        return true;
-      }
+    rexec_->Init();
+    status_ = Status::FIRST;
+    return 'C';
+  } else if (status_ == Status::FIRST) { // NOLINT
+    if (GetTuple(tuple, rid)) {
+      status_ = Status::MULTI;
+      BuildTuple(tuple, &ltuple_, &rtuple_);
+      return 'H';
     }
-    status_ = Status::RightDone;
-    if (!right_matched_ && plan_->GetJoinType() == JoinType::LEFT) {
+    status_ = Status::INIT;
+    if (plan_->join_type_ == JoinType::LEFT) {
       RightEmpty(tuple, &ltuple_);
+      return 'H';
+    }
+    return 'C';
+  } else if (status_ == Status::MULTI) { // NOLINT
+    if (GetTuple(tuple, rid)) {
+      BuildTuple(tuple, &ltuple_, &rtuple_);
+      return 'H';
+    }
+    status_ = Status::INIT;
+    return 'C';
+  }
+  throw Exception("Cannot reach here in this state machine");
+}
+
+auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
+  while (true) {
+    if (auto result = NextStep(tuple, rid); result == 'C') {
+      continue;
+    } else if (result == 'S') { // NOLINT
+      return false;
+    } else if (result == 'H') { // NOLINT
       return true;
     }
   }
-  return false;
 }
 
 }  // namespace bustub

@@ -59,13 +59,16 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
   /** @brief Get a tuple from right table if could, and check the connected one.
    *  @return true if geted a valid one, false if rexec reached end.
    */
-  auto GetTuple(Tuple *result, Tuple *ltuple, Tuple *rtuple) -> bool;
+  auto GetTuple(Tuple *result, RID *rid) -> bool;
 
   /** @brief Check the output_shcema, refer to InferJoinSchema */
   auto CheckSchema(const Schema &target, const Schema &left, const Schema &right) -> bool;
 
   /** @brief Get a tuple with right filled with null */
   void RightEmpty(Tuple *result, Tuple *left);
+
+  /** @brief move forward step */
+  auto NextStep(Tuple *tuple, RID *rid) -> char;
 
   /** The NestedLoopJoin plan node to be executed. */
   const NestedLoopJoinPlanNode *plan_;
@@ -77,7 +80,7 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
   Tuple ltuple_, rtuple_;
 
   /** the status of this executor */
-  enum class Status { Init, AllNotDone, RightDone } status_;
+  enum class Status { INIT, FIRST, MULTI } status_;
 
   /** right table matched or not */
   bool right_matched_{false};
