@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -22,6 +23,43 @@
 #include "storage/table/tuple.h"
 
 namespace bustub {
+
+struct SortKeyTuple {
+  std::vector<Value> keys_;
+  Tuple tuple_;
+
+  explicit SortKeyTuple(size_t key_size): keys_(key_size) {}
+
+  void SetKey(size_t index, const Value &value) {
+    keys_[index] = value;
+  }
+
+  void SetTuple(const Tuple &tuple) {
+    tuple_ = tuple;
+  }
+
+  static auto CompFunc(const std::vector<std::pair<OrderByType, AbstractExpressionRef>> &order_bys, const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
+    // Why put the func in the struct?
+    // Put it outside, it compile multi-times, so ld says multi-definition.
+    BUSTUB_ASSERT(rhs.keys_.size() == lhs.keys_.size(),
+        "Key and tuple length not the same");
+    for (uint32_t i = 0; i < lhs.keys_.size(); i++) {
+      if (lhs.keys_[i].CompareNotEquals(rhs.keys_[i]) == CmpBool::CmpTrue) {
+        switch (order_bys[i].first) {
+          case OrderByType::INVALID:
+            throw Exception{"Invalid sort type"};
+          case OrderByType::DEFAULT:
+          case OrderByType::ASC:
+            return lhs.keys_[i].CompareLessThan(rhs.keys_[i]) == CmpBool::CmpTrue;
+          case OrderByType::DESC:
+            return lhs.keys_[i].CompareGreaterThan(rhs.keys_[i]) == CmpBool::CmpTrue;
+        }
+      }
+    }
+    return false;
+  }
+
+};
 
 /**
  * The SortExecutor executor executes a sort.
@@ -52,5 +90,8 @@ class SortExecutor : public AbstractExecutor {
  private:
   /** The sort plan node to be executed */
   const SortPlanNode *plan_;
+  std::unique_ptr<AbstractExecutor> child_;
+  std::vector<SortKeyTuple> temp_;
+  decltype(temp_.begin()) iter_;
 };
 }  // namespace bustub
