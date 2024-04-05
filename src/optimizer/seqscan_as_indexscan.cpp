@@ -75,7 +75,8 @@ auto Optimizer::OptimizeSeqScanAsIndexScan(const bustub::AbstractPlanNodeRef &pl
     index_id_.resize(table_->schema_.GetColumnCount(), -1);
     for (auto &index : indices_) {
       if (index->key_schema_.GetColumnCount() != 1) {
-        throw Exception("Unsupported combinition index");
+        continue;
+        // throw Exception("Unsupported combinition index");
       }
       index_id_[table_->schema_.GetColIdx(index->key_schema_.GetColumn(0).GetName())] = index->index_oid_;
     }

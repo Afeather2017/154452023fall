@@ -81,9 +81,6 @@ class NestedLoopJoinExecutor : public AbstractExecutor {
 
   /** the status of this executor */
   enum class Status { INIT, FIRST, MULTI } status_;
-
-  /** right table matched or not */
-  bool right_matched_{false};
 };
 
 }  // namespace bustub
