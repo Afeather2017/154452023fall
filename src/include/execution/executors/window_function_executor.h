@@ -12,15 +12,138 @@
 
 #pragma once
 
+#include <bits/iterator_concepts.h>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
+#include "execution/executors/aggregation_executor.h"
+#include "execution/executors/sort_executor.h"
+#include "execution/expressions/column_value_expression.h"
 #include "execution/plans/window_plan.h"
 #include "storage/table/tuple.h"
 
 namespace bustub {
+struct PartitionKey {
+  std::vector<Value> keys_;
+
+  auto operator==(const PartitionKey &rhs) const -> bool {
+    for (uint32_t i = 0; i < rhs.keys_.size(); i++) {
+      if (keys_[i].CompareEquals(rhs.keys_[i]) != CmpBool::CmpTrue) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+} // namespace bustub
+
+namespace std {
+
+/** Implements std::hash on AggregateKey */
+template <>
+struct hash<bustub::PartitionKey> {
+  auto operator()(const bustub::PartitionKey &pkey) const -> std::size_t {
+    size_t curr_hash = 0;
+    for (const auto &key: pkey.keys_) {
+      if (!key.IsNull()) {
+        curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&key));
+      }
+    }
+    return curr_hash;
+  }
+};
+} // namespace std
+
+namespace bustub {
+
+class PartitionHashTable {
+ public:
+  PartitionHashTable() {
+    type_ = static_cast<WindowFunctionType>(0xfffffff);
+  }
+
+  auto InsertCombine(const PartitionKey& key, const Value& value) {
+    auto iter = map_->find(key);
+    if (iter == map_->end()) {
+      Value temp;
+      if (type_ == WindowFunctionType::CountAggregate) {
+        temp = ValueFactory::GetIntegerValue(0);
+      } else {
+        temp = ValueFactory::GetNullValueByType(TypeId::INTEGER);
+      }
+      // std::pair<iterator, bool> insert( value_type&& value )
+      iter = map_->insert({key, temp}).first;
+    }
+    Value temp;
+    switch (type_) {
+      case WindowFunctionType::CountStarAggregate:
+        // throw Exception{"CountStarAggregate is not supported yet"};
+      case WindowFunctionType::CountAggregate:
+        if (iter->second.IsNull()) {
+          temp = ValueFactory::GetIntegerValue(1);
+        } else {
+          temp = iter->second.Add(ValueFactory::GetIntegerValue(1));
+        }
+        break;
+      case WindowFunctionType::SumAggregate:
+        if (iter->second.IsNull()) {
+          temp = value;
+        } else {
+          temp = iter->second.Add(value);
+        }
+        break;
+      case WindowFunctionType::MinAggregate:
+        if (iter->second.IsNull()) {
+          temp = value;
+        } else {
+          temp = iter->second.Min(value);
+        }
+        break;
+      case WindowFunctionType::MaxAggregate:
+        if (iter->second.IsNull()) {
+          temp = value;
+        } else {
+          temp = iter->second.Max(value);
+        }
+        break;
+      case WindowFunctionType::Rank:
+        temp = value;
+        break;
+      default:
+        throw Exception{"Unknow partition type"};
+    }
+    iter->second = temp;
+    return iter;
+  }
+
+  auto SetType(WindowFunctionType type) {
+    map_ = std::make_unique<std::unordered_map<PartitionKey, Value>>();
+    type_ = type;
+  }
+
+  auto Get(const PartitionKey& key) -> Value {
+    auto iter = map_->find(key);
+    if (iter == map_->end()) {
+      throw Exception{"Cannot find key"};
+    }
+    return iter->second;
+  }
+
+  auto Find(const PartitionKey& key) {
+    return map_->find(key);
+  }
+
+  auto End() {
+    return map_->end();
+  }
+
+ private:
+  std::unique_ptr<std::unordered_map<PartitionKey, Value>> map_;
+  WindowFunctionType type_;
+};
 
 /**
  * The WindowFunctionExecutor executor executes a window function for columns using window function.
@@ -89,6 +212,49 @@ class WindowFunctionExecutor : public AbstractExecutor {
   const WindowFunctionPlanNode *plan_;
 
   /** The child executor from which tuples are obtained */
-  std::unique_ptr<AbstractExecutor> child_executor_;
+  std::unique_ptr<AbstractExecutor> child_;
+
+  /** Sort */
+  void Sort();
+  std::vector<SortKeyTuple> sorted_;
+
+  /** Partition by */
+  using WindowFunction = WindowFunctionPlanNode::WindowFunction;
+  using Partition = std::vector<AbstractExpressionRef>;
+  void PartitionBy(const Tuple &tuple,
+                   const WindowFunction &wf,
+                   uint32_t place); // NOLINT
+
+  void PartitionAll();
+
+  auto GetPartitionKey(const Tuple *tuple, const Partition &partition) {
+    std::vector<Value> keys;
+    for (const auto &expr: partition) {
+      keys.emplace_back(expr->Evaluate(tuple, child_->GetOutputSchema()));
+    }
+    return PartitionKey{std::move(keys)};
+  }
+
+  auto CountAsLineNo(const WindowFunctionPlanNode::WindowFunction &wf) {
+    return (wf.type_ == WindowFunctionType::CountAggregate
+        || wf.type_ == WindowFunctionType::CountStarAggregate)
+        && !wf.order_by_.empty();
+  }
+
+  auto OrderByCmp(const WindowFunctionPlanNode::WindowFunction &wf, const Tuple &lhs, const Tuple &rhs) {
+    for (auto [_, expr]: wf.order_by_) {
+      Value current = expr->Evaluate(&lhs, child_->GetOutputSchema());
+      Value origin = expr->Evaluate(&rhs, child_->GetOutputSchema());
+      if (current.CompareEquals(origin) != CmpBool::CmpTrue) {
+        return false;
+      }
+    }
+    return true;
+  }
+  void Extract(uint32_t index, const Tuple *tuple);
+  std::vector<PartitionHashTable> partitions_;
+  std::vector<Value> result_;
+  uint64_t index_;
+  bool partition_all_ = true;
 };
 }  // namespace bustub
