@@ -13,12 +13,12 @@
 #pragma once
 
 #include <endian.h>
-#include <memory>
+#include <algorithm>
 #include <map>
+#include <memory>
 #include <optional>
 #include <unordered_map>
 #include <utility>
-#include <algorithm>
 
 #include "common/util/hash_util.h"
 #include "execution/executor_context.h"
@@ -30,11 +30,9 @@
 namespace bustub {
 
 struct JoinKey {
-  explicit JoinKey(std::vector<Value> keys): keys_{std::move(keys)} {}
+  explicit JoinKey(std::vector<Value> keys) : keys_{std::move(keys)} {}
 
-  void Set(size_t index, const Value &value) {
-    keys_[index] = value;
-  }
+  void Set(size_t index, const Value &value) { keys_[index] = value; }
 
   auto operator==(const JoinKey &rhs) const -> bool {
     BUSTUB_ASSERT(keys_.size() == rhs.keys_.size(), "Key length is not same");
@@ -61,10 +59,10 @@ struct JoinKey {
 
   std::vector<Value> keys_;
 };
-} // namespace bustub
+}  // namespace bustub
 
 namespace std {
-template<>
+template <>
 struct hash<bustub::JoinKey> {
   auto operator()(const bustub::JoinKey &key) const -> std::size_t {
     size_t curr_hash = 0;
@@ -76,16 +74,14 @@ struct hash<bustub::JoinKey> {
     return curr_hash;
   }
 };
-} // namespace std
+}  // namespace std
 
 namespace bustub {
 
 class JoinHashTable {
  public:
   /** Insert a key value */
-  void Insert(const JoinKey& key, Tuple value) {
-    map_[key].push_back(std::move(value));
-  }
+  void Insert(const JoinKey &key, Tuple value) { map_[key].push_back(std::move(value)); }
 
   void Clear() { map_.clear(); };
 
@@ -109,14 +105,10 @@ class JoinHashTable {
     // }
     // return std::pair{map_.lower_bound(key), map_.upper_bound(key)};
   }
-  
-  auto End() {
-    return map_.end();
-  }
 
-  auto Size() {
-    return map_.size();
-  }
+  auto End() { return map_.end(); }
+
+  auto Size() { return map_.size(); }
 
  private:
   // change to unordered_map<key, []>. Tree type in gcc 13.2.1 could cause bugs.
@@ -162,7 +154,6 @@ class HashJoinExecutor : public AbstractExecutor {
   void RightEmpty(Tuple *result, Tuple *left);
   auto NextStep(Tuple *tuple, RID *rid) -> char;
 
-
   /** The child executors. */
   std::unique_ptr<AbstractExecutor> lexec_, rexec_;
 
@@ -175,4 +166,3 @@ class HashJoinExecutor : public AbstractExecutor {
 };
 
 }  // namespace bustub
-

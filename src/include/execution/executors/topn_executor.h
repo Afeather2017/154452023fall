@@ -13,10 +13,10 @@
 #pragma once
 
 #include <memory>
+#include <queue>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <queue>
 
 #include "execution/executor_context.h"
 #include "execution/executors/abstract_executor.h"
@@ -56,9 +56,7 @@ class TopNExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
   /** Sets new child executor (for testing only) */
-  void SetChildExecutor(std::unique_ptr<AbstractExecutor> &&child_executor) {
-    child_ = std::move(child_executor);
-  }
+  void SetChildExecutor(std::unique_ptr<AbstractExecutor> &&child_executor) { child_ = std::move(child_executor); }
 
   /** @return The size of top_entries_ container, which will be called on each child_executor->Next(). */
   auto GetNumInHeap() -> size_t;
@@ -72,16 +70,15 @@ class TopNExecutor : public AbstractExecutor {
   // Helpers
   void InitMember();
   // Put values into heap.
-  std::function<bool(const SortKeyTuple &, const SortKeyTuple &)> cmp_fun_ =
-          [&](const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
-            // Grammar candy
-            // Infact, It calls __this.SortFunc.
-            return SortKeyTuple::CompFunc(plan_->GetOrderBy(), lhs, rhs);
-          };
+  std::function<bool(const SortKeyTuple &, const SortKeyTuple &)> cmp_fun_ = [&](const SortKeyTuple &lhs,
+                                                                                 const SortKeyTuple &rhs) -> bool {
+    // Grammar candy
+    // Infact, It calls __this.SortFunc.
+    return SortKeyTuple::CompFunc(plan_->GetOrderBy(), lhs, rhs);
+  };
   void PutIntoHeap();
   // std::priority_queue<SortKeyTuple, std::vector<SortKeyTuple>, decltype(sort_fun_)> pq_;
   std::vector<SortKeyTuple> heap_;
   size_t iter_index_;
-
 };
 }  // namespace bustub

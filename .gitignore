@@ -9,6 +9,7 @@ debug/*
 key-info.md
 *gdb
 *input
+*.txt
 test.sh
 makefile
 

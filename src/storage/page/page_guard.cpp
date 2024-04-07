@@ -45,7 +45,7 @@ auto BasicPageGuard::GetDataMut() -> char * {
   MEM_CALL();
   ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
-    return nullptr;
+    throw Exception{"Cannot get data from invalid page"};
   }
   is_dirty_ = true;
   return page_->GetData();
@@ -55,7 +55,7 @@ auto BasicPageGuard::GetData() -> const char * {
   MEM_CALL();
   ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
   if (bpm_ == nullptr) {
-    return nullptr;
+    throw Exception{"Cannot get data from invalid page"};
   }
   return page_->GetData();
 }
@@ -185,7 +185,7 @@ auto ReadPageGuard::GetData() -> const char * {
   ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
          (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
-    return nullptr;
+    throw Exception{"Cannot get data from invalid page"};
   }
   return guard_.GetData();
 }
@@ -259,7 +259,7 @@ auto WritePageGuard::GetData() -> const char * {
   ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
          (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
-    return nullptr;
+    throw Exception{"Cannot get data from invalid page"};
   }
   return guard_.GetData();
 }
@@ -269,7 +269,7 @@ auto WritePageGuard::GetDataMut() -> char * {
   ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
          (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
   if (guard_.bpm_ == nullptr) {
-    return nullptr;
+    throw Exception{"Cannot get data from invalid page"};
   }
   return guard_.GetDataMut();
 }

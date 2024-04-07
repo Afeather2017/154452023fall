@@ -11,16 +11,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "execution/executors/hash_join_executor.h"
-#include "type/value_factory.h"
 #include <algorithm>
+#include "type/value_factory.h"
 
 namespace bustub {
 
 HashJoinExecutor::HashJoinExecutor(ExecutorContext *exec_ctx, const HashJoinPlanNode *plan,
                                    std::unique_ptr<AbstractExecutor> &&left_child,
                                    std::unique_ptr<AbstractExecutor> &&right_child)
-    : AbstractExecutor(exec_ctx), plan_{plan}, 
-      lexec_{std::move(left_child)}, rexec_{std::move(right_child)},
+    : AbstractExecutor(exec_ctx),
+      plan_{plan},
+      lexec_{std::move(left_child)},
+      rexec_{std::move(right_child)},
       keys_expr_{plan_->LeftJoinKeyExpressions()},
       keys_{std::vector<Value>(keys_expr_.size())} /* NOLINT */ {
   if (!(plan->GetJoinType() == JoinType::LEFT || plan->GetJoinType() == JoinType::INNER)) /* NOLINT */ {
@@ -63,9 +65,8 @@ void HashJoinExecutor::RightEmpty(Tuple *result, Tuple *left) {
 
 void HashJoinExecutor::BuildTuple(Tuple *result, Tuple *left, Tuple *right) {
   // In plan_node.h:
-  // auto NestedLoopJoinPlanNode::InferJoinSchema(const AbstractPlanNode &left, const AbstractPlanNode &right) -> Schema;
-  // Go through the codes, it just connect left and right schema together.
-  // So we build value like this.
+  // auto NestedLoopJoinPlanNode::InferJoinSchema(const AbstractPlanNode &left, const AbstractPlanNode &right) ->
+  // Schema; Go through the codes, it just connect left and right schema together. So we build value like this.
   std::vector<Value> values(plan_->OutputSchema().GetColumnCount());
   for (uint32_t i = 0; i < lexec_->GetOutputSchema().GetColumns().size(); i++) {
     values[i] = left->GetValue(&lexec_->GetOutputSchema(), i);
@@ -99,7 +100,7 @@ auto HashJoinExecutor::NextStep(Tuple *tuple, RID *rid) -> char {
       return 'H';
     }
     return 'C';
-  } else if (status_ == Status::MULTI) { // NOLINT
+  } else if (status_ == Status::MULTI) {  // NOLINT
     if (iter_ == bound_) {
       status_ = Status::INIT;
       return 'C';
@@ -115,7 +116,7 @@ auto HashJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   while (true) {
     if (auto result = NextStep(tuple, rid); result == 'H') {
       return true;
-    } else if (result == 'C') { // NOLINT
+    } else if (result == 'C') {  // NOLINT
       continue;
     } else {
       return false;

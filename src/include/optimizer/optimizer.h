@@ -124,7 +124,7 @@ class Optimizer {
    * @param expr
    * @return ValueExpressionType the type we interested.
    */
-  enum class ValueExpressionType{ UNKNOW, CONST_VALUE, COLUMN_VALUE, COMP_EXPR, LOGIC_EXPR };
+  enum class ValueExpressionType { UNKNOW, CONST_VALUE, COLUMN_VALUE, COMP_EXPR, LOGIC_EXPR };
   auto GetValueExpressionType(const AbstractExpression *expr) -> ValueExpressionType {
     if (dynamic_cast<const ConstantValueExpression *>(expr) != nullptr) {
       return ValueExpressionType::CONST_VALUE;
@@ -143,7 +143,6 @@ class Optimizer {
     }
     return ValueExpressionType::UNKNOW;
   }
-
 
   /**
    * @param expr
@@ -168,7 +167,8 @@ class Optimizer {
   /** helper of OptimizeNLJAsHashJoin
    *  @brief Put all comparison expression in result, and return false if contains a node that is not and or equal.
    */
-  auto FindAllEqualExpression(const AbstractExpression *expr, std::vector<const ComparisonExpression *> &result) -> bool;
+  auto FindAllEqualExpression(const AbstractExpression *expr, std::vector<const ComparisonExpression *> &result)
+      -> bool;
 
   /** Catalog will be used during the planning process. USERS SHOULD ENSURE IT OUTLIVES
    * OPTIMIZER, otherwise it's a dangling reference.

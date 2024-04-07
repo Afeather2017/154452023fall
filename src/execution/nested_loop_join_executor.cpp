@@ -55,9 +55,8 @@ void NestedLoopJoinExecutor::Init() {
 
 void NestedLoopJoinExecutor::BuildTuple(Tuple *result, Tuple *left, Tuple *right) {
   // In plan_node.h:
-  // auto NestedLoopJoinPlanNode::InferJoinSchema(const AbstractPlanNode &left, const AbstractPlanNode &right) -> Schema;
-  // Go through the codes, it just connect left and right schema together.
-  // So we build value like this.
+  // auto NestedLoopJoinPlanNode::InferJoinSchema(const AbstractPlanNode &left, const AbstractPlanNode &right) ->
+  // Schema; Go through the codes, it just connect left and right schema together. So we build value like this.
   std::vector<Value> values(plan_->OutputSchema().GetColumnCount());
   for (uint32_t i = 0; i < lexec_->GetOutputSchema().GetColumns().size(); i++) {
     values[i] = left->GetValue(&lexec_->GetOutputSchema(), i);
@@ -102,7 +101,7 @@ auto NestedLoopJoinExecutor::NextStep(Tuple *tuple, RID *rid) -> char {
     rexec_->Init();
     status_ = Status::FIRST;
     return 'C';
-  } else if (status_ == Status::FIRST) { // NOLINT
+  } else if (status_ == Status::FIRST) {  // NOLINT
     if (GetTuple(tuple, rid)) {
       status_ = Status::MULTI;
       BuildTuple(tuple, &ltuple_, &rtuple_);
@@ -114,7 +113,7 @@ auto NestedLoopJoinExecutor::NextStep(Tuple *tuple, RID *rid) -> char {
       return 'H';
     }
     return 'C';
-  } else if (status_ == Status::MULTI) { // NOLINT
+  } else if (status_ == Status::MULTI) {  // NOLINT
     if (GetTuple(tuple, rid)) {
       BuildTuple(tuple, &ltuple_, &rtuple_);
       return 'H';
@@ -129,9 +128,9 @@ auto NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   while (true) {
     if (auto result = NextStep(tuple, rid); result == 'C') {
       continue;
-    } else if (result == 'S') { // NOLINT
+    } else if (result == 'S') {  // NOLINT
       return false;
-    } else if (result == 'H') { // NOLINT
+    } else if (result == 'H') {  // NOLINT
       return true;
     }
   }

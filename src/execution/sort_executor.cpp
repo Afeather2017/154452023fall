@@ -24,10 +24,9 @@ void SortExecutor::Init() {
     key_tuple.SetTuple(tuple);
     temp_.push_back(key_tuple);
   }
-  std::sort(temp_.begin(), temp_.end(),
-           [&](const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
-            return SortKeyTuple::CompFunc(plan_->GetOrderBy(), lhs, rhs);
-           });
+  std::sort(temp_.begin(), temp_.end(), [&](const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
+    return SortKeyTuple::CompFunc(plan_->GetOrderBy(), lhs, rhs);
+  });
   iter_ = temp_.begin();
 }
 

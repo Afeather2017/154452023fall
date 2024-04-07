@@ -40,6 +40,8 @@ Checks:     '
             -google-readability-avoid-underscore-in-googletest-name,
             -modernize-avoid-c-arrays,
             -modernize-use-nodiscard,
+            -modernize-type-traits,
+            -performance-avoid-endl,
             -readability-convert-member-functions-to-static,
             -readability-identifier-length,
             -readability-function-cognitive-complexity,

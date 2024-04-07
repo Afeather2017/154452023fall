@@ -24,10 +24,10 @@ auto Optimizer::OptimizeSortLimitAsTopN(const AbstractPlanNodeRef &plan) -> Abst
   auto child = dynamic_cast<const SortPlanNode *>(optimized->children_[0].get());
   auto current = dynamic_cast<const LimitPlanNode *>(optimized.get());
   BUSTUB_ASSERT(child->children_.size() == 1, "Sort contains exactly 1 child");
-  return std::make_shared<TopNPlanNode>(current->output_schema_,
-                                        child->children_[0],
-                                        child->order_bys_,
-                                        current->limit_); // NOLINT
+  return std::make_shared<TopNPlanNode>(current->output_schema_,  // NOLINT
+                                        child->children_[0],      // NOLINT
+                                        child->order_bys_,        // NOLINT
+                                        current->limit_);         // NOLINT
 }
 
 }  // namespace bustub

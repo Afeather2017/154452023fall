@@ -68,8 +68,8 @@
 
 #undef ENSURE
 #undef PRINT_CALL
-#define ENSURE(a)
-#define PRINT_CALL(a)
+#define ENSURE(...)
+#define PRINT_CALL(...)
 
 #endif  // AFEATHER_ENSURE_
 

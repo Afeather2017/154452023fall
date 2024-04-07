@@ -17,7 +17,8 @@
 
 namespace bustub {
 
-auto Optimizer::FindAllEqualExpression(const AbstractExpression *expr, std::vector<const ComparisonExpression *> &result) -> bool {
+auto Optimizer::FindAllEqualExpression(const AbstractExpression *expr,
+                                       std::vector<const ComparisonExpression *> &result) -> bool {
   if (auto type = GetValueExpressionType(expr); type == ValueExpressionType::COMP_EXPR) {
     auto comp_expr = dynamic_cast<const ComparisonExpression *>(expr);
     if (comp_expr->comp_type_ == ComparisonType::Equal) {
@@ -35,7 +36,7 @@ auto Optimizer::FindAllEqualExpression(const AbstractExpression *expr, std::vect
   } else {
     return false;
   }
-  for (const auto &expr: expr->children_) {
+  for (const auto &expr : expr->children_) {
     if (!FindAllEqualExpression(expr.get(), result)) {
       return false;
     }
@@ -49,7 +50,7 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
   // E.g. <column expr> = <column expr> AND <column expr> = <column expr> AND ...
   std::vector<AbstractPlanNodeRef> children;
   for (const auto &child : plan->GetChildren()) {
-    // Why copy here? 
+    // Why copy here?
     //  A plan node could be a tree, so we should recursivly apply this.
     children.emplace_back(OptimizeNLJAsHashJoin(child));
   }
@@ -71,30 +72,27 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
   if (comp.empty()) {
     return optimized;
   }
-  // Iterate all and get all 
+  // Iterate all and get all
   std::vector<AbstractExpressionRef> left_expr;
   std::vector<AbstractExpressionRef> right_expr;
   left_expr.reserve(comp.size());
   right_expr.reserve(comp.size());
-  for (auto expr: comp) {
+  for (auto expr : comp) {
     auto left = dynamic_cast<const ColumnValueExpression *>(expr->GetChildAt(0).get());
     auto right = dynamic_cast<const ColumnValueExpression *>(expr->GetChildAt(1).get());
     // See column_value_expression, the value = 0 means the column from left table.
     if (left->GetTupleIdx() == 1 && right->GetTupleIdx() == 0) {
       left_expr.push_back(expr->GetChildAt(1));
       right_expr.push_back(expr->GetChildAt(0));
-    } 
+    }
     if (left->GetTupleIdx() == 0 && right->GetTupleIdx() == 1) {
       left_expr.push_back(expr->GetChildAt(0));
       right_expr.push_back(expr->GetChildAt(1));
-    } 
+    }
   }
-  return std::make_shared<HashJoinPlanNode>(loop_join_plan->output_schema_,
-                                            loop_join_plan->GetChildAt(0),
-                                            loop_join_plan->GetChildAt(1),
-                                            std::move(left_expr),
-                                            std::move(right_expr),
-                                            loop_join_plan->join_type_); // NOLINT
+  return std::make_shared<HashJoinPlanNode>(loop_join_plan->output_schema_, loop_join_plan->GetChildAt(0),
+                                            loop_join_plan->GetChildAt(1), std::move(left_expr), std::move(right_expr),
+                                            loop_join_plan->join_type_);  // NOLINT
 }
 
 }  // namespace bustub

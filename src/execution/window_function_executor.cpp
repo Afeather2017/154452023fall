@@ -25,23 +25,21 @@ void WindowFunctionExecutor::Sort() {
     key_tuple.SetTuple(tuple);
     sorted_.push_back(key_tuple);
   }
-  std::sort(sorted_.begin(), sorted_.end(),
-            [&](const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
-              return SortKeyTuple::CompFunc(order_bys, lhs, rhs);
-            });
+  std::sort(sorted_.begin(), sorted_.end(), [&](const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
+    return SortKeyTuple::CompFunc(order_bys, lhs, rhs);
+  });
 }
 
-void WindowFunctionExecutor::PartitionBy(const Tuple &tuple,
-                                         const WindowFunction &wf,
-                                         uint32_t place) { // NOLINT
+void WindowFunctionExecutor::PartitionBy(const Tuple &tuple, const WindowFunction &wf,
+                                         uint32_t place) {  // NOLINT
   const auto &key = GetPartitionKey(&tuple, wf.partition_by_);
   auto value = wf.function_->Evaluate(&tuple, child_->GetOutputSchema());
   partitions_[place].InsertCombine(key, value);
 }
 
 void WindowFunctionExecutor::PartitionAll() {
-  for (const auto &tuple: sorted_) {
-    for (const auto &[place, v]: plan_->window_functions_) {
+  for (const auto &tuple : sorted_) {
+    for (const auto &[place, v] : plan_->window_functions_) {
       PartitionBy(tuple.tuple_, v, place);
     }
   }
@@ -120,7 +118,7 @@ auto WindowFunctionExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     auto expr = dynamic_cast<ColumnValueExpression *>(plan_->columns_[i].get());
     BUSTUB_ASSERT(expr != nullptr, "AbstractExpression cannot convert to column expr");
     auto place = static_cast<int>(expr->GetColIdx());
-    if (place == -1) { // It's a placeholder
+    if (place == -1) {  // It's a placeholder
       Extract(i, &sorted_[index_].tuple_);
     } else {
       result_[i] = plan_->columns_[i]->Evaluate(&sorted_[index_].tuple_, *plan_->output_schema_);

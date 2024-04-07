@@ -28,21 +28,17 @@ struct SortKeyTuple {
   std::vector<Value> keys_;
   Tuple tuple_;
 
-  explicit SortKeyTuple(size_t key_size): keys_(key_size) {}
+  explicit SortKeyTuple(size_t key_size) : keys_(key_size) {}
 
-  void SetKey(size_t index, const Value &value) {
-    keys_[index] = value;
-  }
+  void SetKey(size_t index, const Value &value) { keys_[index] = value; }
 
-  void SetTuple(const Tuple &tuple) {
-    tuple_ = tuple;
-  }
+  void SetTuple(const Tuple &tuple) { tuple_ = tuple; }
 
-  static auto CompFunc(const std::vector<std::pair<OrderByType, AbstractExpressionRef>> &order_bys, const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
+  static auto CompFunc(const std::vector<std::pair<OrderByType, AbstractExpressionRef>> &order_bys,
+                       const SortKeyTuple &lhs, const SortKeyTuple &rhs) -> bool {
     // Why put the func in the struct?
     // Put it outside, it compile multi-times, so ld says multi-definition.
-    BUSTUB_ASSERT(rhs.keys_.size() == lhs.keys_.size(),
-        "Key and tuple length not the same");
+    BUSTUB_ASSERT(rhs.keys_.size() == lhs.keys_.size(), "Key and tuple length not the same");
     for (uint32_t i = 0; i < lhs.keys_.size(); i++) {
       if (lhs.keys_[i].CompareNotEquals(rhs.keys_[i]) == CmpBool::CmpTrue) {
         switch (order_bys[i].first) {
@@ -58,7 +54,6 @@ struct SortKeyTuple {
     }
     return false;
   }
-
 };
 
 /**

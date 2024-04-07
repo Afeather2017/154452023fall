@@ -38,7 +38,7 @@ struct PartitionKey {
     return true;
   }
 };
-} // namespace bustub
+}  // namespace bustub
 
 namespace std {
 
@@ -47,7 +47,7 @@ template <>
 struct hash<bustub::PartitionKey> {
   auto operator()(const bustub::PartitionKey &pkey) const -> std::size_t {
     size_t curr_hash = 0;
-    for (const auto &key: pkey.keys_) {
+    for (const auto &key : pkey.keys_) {
       if (!key.IsNull()) {
         curr_hash = bustub::HashUtil::CombineHashes(curr_hash, bustub::HashUtil::HashValue(&key));
       }
@@ -55,17 +55,15 @@ struct hash<bustub::PartitionKey> {
     return curr_hash;
   }
 };
-} // namespace std
+}  // namespace std
 
 namespace bustub {
 
 class PartitionHashTable {
  public:
-  PartitionHashTable() {
-    type_ = static_cast<WindowFunctionType>(0xfffffff);
-  }
+  PartitionHashTable() { type_ = static_cast<WindowFunctionType>(0xfffffff); }
 
-  auto InsertCombine(const PartitionKey& key, const Value& value) {
+  auto InsertCombine(const PartitionKey &key, const Value &value) {
     auto iter = map_->find(key);
     if (iter == map_->end()) {
       Value temp;
@@ -124,7 +122,7 @@ class PartitionHashTable {
     type_ = type;
   }
 
-  auto Get(const PartitionKey& key) -> Value {
+  auto Get(const PartitionKey &key) -> Value {
     auto iter = map_->find(key);
     if (iter == map_->end()) {
       throw Exception{"Cannot find key"};
@@ -132,13 +130,9 @@ class PartitionHashTable {
     return iter->second;
   }
 
-  auto Find(const PartitionKey& key) {
-    return map_->find(key);
-  }
+  auto Find(const PartitionKey &key) { return map_->find(key); }
 
-  auto End() {
-    return map_->end();
-  }
+  auto End() { return map_->end(); }
 
  private:
   std::unique_ptr<std::unordered_map<PartitionKey, Value>> map_;
@@ -221,28 +215,26 @@ class WindowFunctionExecutor : public AbstractExecutor {
   /** Partition by */
   using WindowFunction = WindowFunctionPlanNode::WindowFunction;
   using Partition = std::vector<AbstractExpressionRef>;
-  void PartitionBy(const Tuple &tuple,
-                   const WindowFunction &wf,
-                   uint32_t place); // NOLINT
+  void PartitionBy(const Tuple &tuple, const WindowFunction &wf,
+                   uint32_t place);  // NOLINT
 
   void PartitionAll();
 
   auto GetPartitionKey(const Tuple *tuple, const Partition &partition) {
     std::vector<Value> keys;
-    for (const auto &expr: partition) {
+    for (const auto &expr : partition) {
       keys.emplace_back(expr->Evaluate(tuple, child_->GetOutputSchema()));
     }
     return PartitionKey{std::move(keys)};
   }
 
   auto CountAsLineNo(const WindowFunctionPlanNode::WindowFunction &wf) {
-    return (wf.type_ == WindowFunctionType::CountAggregate
-        || wf.type_ == WindowFunctionType::CountStarAggregate)
-        && !wf.order_by_.empty();
+    return (wf.type_ == WindowFunctionType::CountAggregate || wf.type_ == WindowFunctionType::CountStarAggregate) &&
+           !wf.order_by_.empty();
   }
 
   auto OrderByCmp(const WindowFunctionPlanNode::WindowFunction &wf, const Tuple &lhs, const Tuple &rhs) {
-    for (auto [_, expr]: wf.order_by_) {
+    for (auto [_, expr] : wf.order_by_) {
       Value current = expr->Evaluate(&lhs, child_->GetOutputSchema());
       Value origin = expr->Evaluate(&rhs, child_->GetOutputSchema());
       if (current.CompareEquals(origin) != CmpBool::CmpTrue) {

@@ -13,7 +13,7 @@ void TopNExecutor::InitMember() {
   heap_.clear();
   iter_index_ = 0;
   // The array is empty, so it is a heap.
-  //std::make_heap(heap_.begin(), heap_.end());
+  // std::make_heap(heap_.begin(), heap_.end());
 }
 
 void TopNExecutor::PutIntoHeap() {

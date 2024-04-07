@@ -14,8 +14,7 @@
 
 namespace bustub {
 IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan)
-    : AbstractExecutor(exec_ctx), plan_{plan} {
-}
+    : AbstractExecutor(exec_ctx), plan_{plan} {}
 
 void IndexScanExecutor::Init() {
   Catalog *catalog{exec_ctx_->GetCatalog()};
