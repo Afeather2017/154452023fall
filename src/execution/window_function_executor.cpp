@@ -82,9 +82,11 @@ void WindowFunctionExecutor::Extract(uint32_t result_index, const Tuple *tuple) 
   auto key = GetPartitionKey(tuple, wf.partition_by_);
   if (wf.type_ == WindowFunctionType::Rank) {
     auto iter = partitions_[result_index].Find(key);
+    Value rank;
     if (iter == partitions_[result_index].End()) {
       uint64_t value = (static_cast<uint64_t>(index_) << 32) + 1;
       partitions_[result_index].InsertCombine(key, ValueFactory::GetBigIntValue(value));
+      rank = ValueFactory::GetIntegerValue(1);
     } else {
       Value result_index_count = iter->second;
       auto rc = result_index_count.GetAs<uint64_t>();
@@ -92,14 +94,29 @@ void WindowFunctionExecutor::Extract(uint32_t result_index, const Tuple *tuple) 
       uint32_t count = rc & 0xffffffff;
       if (OrderByCmp(wf, pre_one, *tuple)) {
         result_[result_index] = ValueFactory::GetIntegerValue(count);
+        rank = ValueFactory::GetIntegerValue(count);
       } else {
         count++;
         uint64_t temp = (static_cast<uint64_t>(index_) << 32) + index_ + 1;
         auto value = ValueFactory::GetBigIntValue(temp);
         partitions_[result_index].InsertCombine(key, value);
+        /* for the strange case, index_ + 1 is a workaround.
+         * query rowsort
+         * select v1, rank() over (order by v1) from t1;
+         * ----
+         * -99999 1
+         * 0 2
+         * 1 3
+         * 1 3
+         * 2 5
+         * 3 6
+         * 3 6
+         * 99999 8
+         */
+        rank = ValueFactory::GetIntegerValue(index_ + 1);
       }
     }
-    result_[result_index] = partitions_[result_index].Get(key);
+    result_[result_index] = rank;
     return;
   }
 
