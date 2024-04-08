@@ -17,21 +17,28 @@
 
 namespace bustub {
 
-auto Optimizer::FindAllEqualExpression(const AbstractExpression *expr,
-                                       std::vector<const ComparisonExpression *> &result) -> bool {
-  if (auto type = GetValueExpressionType(expr); type == ValueExpressionType::COMP_EXPR) {
+  /** helper of OptimizeNLJAsHashJoin
+   *  @brief Put all comparison expression in result, and return trur if all logic_expr is and.
+   */
+auto FindAllEqualExpression(                                   // NOLINT
+            const AbstractExpression *expr,                    // NOLINT
+            std::vector<const ComparisonExpression *> &result) // NOLINT
+    -> bool {
+
+  auto type = Optimizer::GetValueExpressionType(expr);
+  if ( type == Optimizer::ValueExpressionType::COMP_EXPR) {
     auto comp_expr = dynamic_cast<const ComparisonExpression *>(expr);
     if (comp_expr->comp_type_ == ComparisonType::Equal) {
       result.push_back(comp_expr);
     } else {
       return false;
     }
-  } else if (type == ValueExpressionType::LOGIC_EXPR) {
+  } else if (type == Optimizer::ValueExpressionType::LOGIC_EXPR) {
     auto logic_expr = dynamic_cast<const LogicExpression *>(expr);
     if (logic_expr->logic_type_ != LogicType::And) {
       return false;
     }
-  } else if (type == ValueExpressionType::COLUMN_VALUE) {
+  } else if (type == Optimizer::ValueExpressionType::COLUMN_VALUE) {
     // Nothing to do here.
   } else {
     return false;

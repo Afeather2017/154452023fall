@@ -30,6 +30,31 @@ class Optimizer {
 
   auto OptimizeCustom(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
+  /**
+   * @brief get the type of expr.
+   * @param expr
+   * @return ValueExpressionType the type we interested.
+   */
+  enum class ValueExpressionType { UNKNOW, CONST_VALUE, COLUMN_VALUE, COMP_EXPR, LOGIC_EXPR };
+  static auto GetValueExpressionType(const AbstractExpression *expr) -> ValueExpressionType {
+    if (dynamic_cast<const ConstantValueExpression *>(expr) != nullptr) {
+      return ValueExpressionType::CONST_VALUE;
+    }
+    if (dynamic_cast<const ColumnValueExpression *>(expr) != nullptr) {
+      return ValueExpressionType::COLUMN_VALUE;
+    }
+    if (dynamic_cast<const ComparisonExpression *>(expr) != nullptr) {
+      return ValueExpressionType::COMP_EXPR;
+    }
+    if (dynamic_cast<const LogicExpression *>(expr) != nullptr) {
+      return ValueExpressionType::LOGIC_EXPR;
+    }
+    if (dynamic_cast<const LogicExpression *>(expr) != nullptr) {
+      return ValueExpressionType::LOGIC_EXPR;
+    }
+    return ValueExpressionType::UNKNOW;
+  }
+
  private:
   /**
    * @brief merge projections that do identical project.
@@ -44,6 +69,11 @@ class Optimizer {
    * can merge the filter condition into nested loop join to achieve better efficiency.
    */
   auto OptimizeMergeFilterNLJ(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
+
+  /**
+   * @brief decompose prediction of NLJ to it's children if it could be done in children executor.
+   */
+  auto OptimizeMultiTimesNLJ(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
   /**
    * @brief optimize nested loop join into hash join.
@@ -120,31 +150,6 @@ class Optimizer {
   auto FindAnIndexRecursively(const AbstractExpression *expr) -> bool;
 
   /**
-   * @brief get the type of expr.
-   * @param expr
-   * @return ValueExpressionType the type we interested.
-   */
-  enum class ValueExpressionType { UNKNOW, CONST_VALUE, COLUMN_VALUE, COMP_EXPR, LOGIC_EXPR };
-  auto GetValueExpressionType(const AbstractExpression *expr) -> ValueExpressionType {
-    if (dynamic_cast<const ConstantValueExpression *>(expr) != nullptr) {
-      return ValueExpressionType::CONST_VALUE;
-    }
-    if (dynamic_cast<const ColumnValueExpression *>(expr) != nullptr) {
-      return ValueExpressionType::COLUMN_VALUE;
-    }
-    if (dynamic_cast<const ComparisonExpression *>(expr) != nullptr) {
-      return ValueExpressionType::COMP_EXPR;
-    }
-    if (dynamic_cast<const LogicExpression *>(expr) != nullptr) {
-      return ValueExpressionType::LOGIC_EXPR;
-    }
-    if (dynamic_cast<const LogicExpression *>(expr) != nullptr) {
-      return ValueExpressionType::LOGIC_EXPR;
-    }
-    return ValueExpressionType::UNKNOW;
-  }
-
-  /**
    * @param expr
    * @return int -1 not found otherwise index id;
    */
@@ -163,12 +168,6 @@ class Optimizer {
   /** The value used by FindAnIndexRecursively */
   std::vector<IndexInfo *> indices_;
   TableInfo *table_;
-
-  /** helper of OptimizeNLJAsHashJoin
-   *  @brief Put all comparison expression in result, and return false if contains a node that is not and or equal.
-   */
-  auto FindAllEqualExpression(const AbstractExpression *expr, std::vector<const ComparisonExpression *> &result)
-      -> bool;
 
   /** Catalog will be used during the planning process. USERS SHOULD ENSURE IT OUTLIVES
    * OPTIMIZER, otherwise it's a dangling reference.
