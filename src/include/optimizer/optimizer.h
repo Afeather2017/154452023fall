@@ -182,4 +182,8 @@ class Optimizer {
   const bool force_starter_rule_;
 };
 
+auto FindAllCompExpressionIfAllLogicExprIsAnd(          // NOLINT
+    const AbstractExpression *expr,                     // NOLINT
+    std::vector<const ComparisonExpression *> &result)  // NOLINT
+    -> bool;
 }  // namespace bustub

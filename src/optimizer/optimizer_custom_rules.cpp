@@ -44,7 +44,6 @@ auto CompareBelongsTo(const ComparisonExpression *expr) -> int32_t {
   return 2;
 }
 
-
 /**
  * @brief rewrite the column expr of cmp expr of the plan node,
  *        to its child NLJ plan node.
@@ -56,8 +55,8 @@ auto RewriteColExprJoin(const NestedLoopJoinPlanNode *plan, uint32_t offset,  //
                         std::vector<AbstractExpressionRef> &expr) {           // NOLINT
 
   // sizes for iter.
-  std::array sizes{plan->GetLeftPlan()->OutputSchema().GetColumnCount(),   // Left size
-                   plan->OutputSchema().GetColumnCount()}; // right size
+  std::array sizes{plan->GetLeftPlan()->OutputSchema().GetColumnCount(),  // Left size
+                   plan->OutputSchema().GetColumnCount()};                // right size
   std::vector<AbstractExpressionRef> ret;
   ret.reserve(expr.size());
   std::vector<AbstractExpressionRef> sides(2);
@@ -90,7 +89,7 @@ auto RewriteColExprJoin(const NestedLoopJoinPlanNode *plan, uint32_t offset,  //
   return ret;
 }
 /**
- * @brief classify the expr to plan.left, plan.right. 
+ * @brief classify the expr to plan.left, plan.right.
  */
 auto RewriteCompExpr(const NestedLoopJoinPlanNode *plan,          // NOLINT
                      std::vector<AbstractExpressionRef> &expr) {  // NOLINT
@@ -98,10 +97,10 @@ auto RewriteCompExpr(const NestedLoopJoinPlanNode *plan,          // NOLINT
    * To clearify the code, we use AbstractExpressionRef only.
    *   ColumnValueExpression could mess up with ComparisionExpression.
    */
-  std::array offsets{0U, plan->GetLeftPlan()->OutputSchema().GetColumnCount()}; 
+  std::array offsets{0U, plan->GetLeftPlan()->OutputSchema().GetColumnCount()};
   std::array<std::vector<AbstractExpressionRef>, 3> ret;
   for (const auto &comp : expr) {
-    auto from = CompareBelongsTo(dynamic_cast<ComparisonExpression*>(comp.get()));
+    auto from = CompareBelongsTo(dynamic_cast<ComparisonExpression *>(comp.get()));
     ret[from].push_back(comp);
   }
   for (uint32_t i = 0; i < 2; i++) {
@@ -115,13 +114,12 @@ auto RewriteCompExpr(const NestedLoopJoinPlanNode *plan,          // NOLINT
   return ret;
 }
 
-auto FindAllCompExpressionIfAllLogicExprIsAnd(            // NOLINT
-        const AbstractExpression *expr,                   // NOLINT
-        std::vector<const ComparisonExpression *> &result)// NOLINT
-      -> bool {
+auto FindAllCompExpressionIfAllLogicExprIsAnd(          // NOLINT
+    const AbstractExpression *expr,                     // NOLINT
+    std::vector<const ComparisonExpression *> &result)  // NOLINT
+    -> bool {
   auto type = Optimizer::GetValueExpressionType(expr);
   if (type == Optimizer::ValueExpressionType::COMP_EXPR) {
-
     auto comp_expr = dynamic_cast<const ComparisonExpression *>(expr);
     result.push_back(comp_expr);
   } else if (type == Optimizer::ValueExpressionType::LOGIC_EXPR) {
@@ -159,9 +157,9 @@ auto BuildLogicExprTree(const std::vector<AbstractExpressionRef> &exprs) -> Abst
  * @param plan a NLJ plan node
  * @param comp the comparision expression in plan.predicate
  */
-auto DecomposePrediction(const NestedLoopJoinPlanNode *plan,          // NOLINT
-                         std::vector<AbstractExpressionRef> &comp)    // NOLINT
-                         -> AbstractPlanNodeRef {                     // NOLINT
+auto DecomposePrediction(const NestedLoopJoinPlanNode *plan,        // NOLINT
+                         std::vector<AbstractExpressionRef> &comp)  // NOLINT
+    -> AbstractPlanNodeRef {                                        // NOLINT
   BUSTUB_ASSERT(plan->children_.size() == 2, "NLJ must contain only 2 child.");
   auto child_comps = RewriteCompExpr(plan, comp);
   std::array<AbstractPlanNodeRef, 2> ret;
@@ -188,10 +186,10 @@ auto DecomposePrediction(const NestedLoopJoinPlanNode *plan,          // NOLINT
     }
   }
   auto predicate = BuildLogicExprTree(child_comps[2]);
-  return std::make_shared<NestedLoopJoinPlanNode>(plan->output_schema_, // NOLINT
-                                                  ret[0], ret[1],       // NOLINT
-                                                  predicate,            // NOLINT
-                                                  plan->join_type_);    // NOLINT
+  return std::make_shared<NestedLoopJoinPlanNode>(plan->output_schema_,  // NOLINT
+                                                  ret[0], ret[1],        // NOLINT
+                                                  predicate,             // NOLINT
+                                                  plan->join_type_);     // NOLINT
 }
 
 auto Optimizer::OptimizeMultiTimesNLJ(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef {
@@ -229,8 +227,8 @@ auto Optimizer::OptimizeMultiTimesNLJ(const AbstractPlanNodeRef &plan) -> Abstra
 /**
  * @brief change cmp expr for left and right to a single table.
  */
-auto ExprPushUp(NestedLoopJoinPlanNode *plan,               // NOLINT
-                std::vector<AbstractExpressionRef> &expr) { // NOLINT
+auto ExprPushUp(NestedLoopJoinPlanNode *plan,                // NOLINT
+                std::vector<AbstractExpressionRef> &expr) {  // NOLINT
   auto left_size = plan->GetLeftPlan()->OutputSchema().GetColumnCount();
   std::vector<AbstractExpressionRef> ret;
   ret.reserve(expr.size());
@@ -262,9 +260,9 @@ auto ExprPushUp(NestedLoopJoinPlanNode *plan,               // NOLINT
  * @brief classify the comparision expression.
  *        Make filters to its child expr it it can.
  */
-auto NodeWrap(NestedLoopJoinPlanNode *plan,                    // NOLINT
-              std::vector<const ComparisonExpression *> &expr) // NOLINT
-              -> AbstractPlanNodeRef {
+auto NodeWrap(NestedLoopJoinPlanNode *plan,                     // NOLINT
+              std::vector<const ComparisonExpression *> &expr)  // NOLINT
+    -> AbstractPlanNodeRef {
   std::vector<AbstractExpressionRef> eq;
   std::vector<AbstractExpressionRef> ne;
   // 1. find all eq expr, and others.
@@ -281,19 +279,19 @@ auto NodeWrap(NestedLoopJoinPlanNode *plan,                    // NOLINT
   // 2. rewrite ne.
   ne = ExprPushUp(plan, ne);
   AbstractExpressionRef predicate = BuildLogicExprTree(eq);
-  AbstractPlanNodeRef nljp = std::make_shared<NestedLoopJoinPlanNode>( // NOLINT
-                                           plan->output_schema_,       // NOLINT
-                                           plan->GetLeftPlan(),        // NOLINT
-                                           plan->GetRightPlan(),       // NOLINT
-                                           predicate,                  // NOLINT
-                                           plan->join_type_);
+  AbstractPlanNodeRef nljp = std::make_shared<NestedLoopJoinPlanNode>(  // NOLINT
+      plan->output_schema_,                                             // NOLINT
+      plan->GetLeftPlan(),                                              // NOLINT
+      plan->GetRightPlan(),                                             // NOLINT
+      predicate,                                                        // NOLINT
+      plan->join_type_);
   predicate = BuildLogicExprTree(ne);
-  return std::make_shared<FilterPlanNode>(plan->output_schema_, // NOLINT
-                                          predicate, nljp);     // NOLINT
+  return std::make_shared<FilterPlanNode>(plan->output_schema_,  // NOLINT
+                                          predicate, nljp);      // NOLINT
 }
 
-auto Optimizer::OptimizePredicateFilter(const AbstractPlanNodeRef &plan) // NOLINT
-                                        -> AbstractPlanNodeRef {
+auto Optimizer::OptimizePredicateFilter(const AbstractPlanNodeRef &plan)  // NOLINT
+    -> AbstractPlanNodeRef {
   std::vector<AbstractPlanNodeRef> children;
   for (const auto &child : plan->GetChildren()) {
     children.emplace_back(OptimizePredicateFilter(child));

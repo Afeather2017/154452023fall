@@ -17,17 +17,16 @@
 
 namespace bustub {
 
-  /** helper of OptimizeNLJAsHashJoin
-   *  @brief Put all comparison expression in result,
-   *         and return trur if all logic_expr is and.
-   */
-auto FindAllEqualExpression(                                   // NOLINT
-            const AbstractExpression *expr,                    // NOLINT
-            std::vector<const ComparisonExpression *> &result) // NOLINT
+/** helper of OptimizeNLJAsHashJoin
+ *  @brief Put all comparison expression in result,
+ *         and return trur if all logic_expr is and.
+ */
+auto FindAllEqualExpression(                            // NOLINT
+    const AbstractExpression *expr,                     // NOLINT
+    std::vector<const ComparisonExpression *> &result)  // NOLINT
     -> bool {
-
   auto type = Optimizer::GetValueExpressionType(expr);
-  if ( type == Optimizer::ValueExpressionType::COMP_EXPR) {
+  if (type == Optimizer::ValueExpressionType::COMP_EXPR) {
     auto comp_expr = dynamic_cast<const ComparisonExpression *>(expr);
     if (comp_expr->comp_type_ == ComparisonType::Equal) {
       result.push_back(comp_expr);
@@ -98,12 +97,12 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
       right_expr.push_back(expr->GetChildAt(1));
     }
   }
-  return std::make_shared<HashJoinPlanNode>(loop_join_plan->output_schema_, // NOLINT
-                                            loop_join_plan->GetChildAt(0),  // NOLINT
-                                            loop_join_plan->GetChildAt(1),  // NOLINT
-                                            std::move(left_expr),           // NOLINT
-                                            std::move(right_expr),          // NOLINT
-                                            loop_join_plan->join_type_);    // NOLINT
+  return std::make_shared<HashJoinPlanNode>(loop_join_plan->output_schema_,  // NOLINT
+                                            loop_join_plan->GetChildAt(0),   // NOLINT
+                                            loop_join_plan->GetChildAt(1),   // NOLINT
+                                            std::move(left_expr),            // NOLINT
+                                            std::move(right_expr),           // NOLINT
+                                            loop_join_plan->join_type_);     // NOLINT
 }
 
 }  // namespace bustub
