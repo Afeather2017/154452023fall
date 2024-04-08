@@ -18,7 +18,8 @@
 namespace bustub {
 
   /** helper of OptimizeNLJAsHashJoin
-   *  @brief Put all comparison expression in result, and return trur if all logic_expr is and.
+   *  @brief Put all comparison expression in result,
+   *         and return trur if all logic_expr is and.
    */
 auto FindAllEqualExpression(                                   // NOLINT
             const AbstractExpression *expr,                    // NOLINT
@@ -97,9 +98,12 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
       right_expr.push_back(expr->GetChildAt(1));
     }
   }
-  return std::make_shared<HashJoinPlanNode>(loop_join_plan->output_schema_, loop_join_plan->GetChildAt(0),
-                                            loop_join_plan->GetChildAt(1), std::move(left_expr), std::move(right_expr),
-                                            loop_join_plan->join_type_);  // NOLINT
+  return std::make_shared<HashJoinPlanNode>(loop_join_plan->output_schema_, // NOLINT
+                                            loop_join_plan->GetChildAt(0),  // NOLINT
+                                            loop_join_plan->GetChildAt(1),  // NOLINT
+                                            std::move(left_expr),           // NOLINT
+                                            std::move(right_expr),          // NOLINT
+                                            loop_join_plan->join_type_);    // NOLINT
 }
 
 }  // namespace bustub

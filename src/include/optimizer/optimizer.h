@@ -76,6 +76,11 @@ class Optimizer {
   auto OptimizeMultiTimesNLJ(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
 
   /**
+   * @brief decompose prediction of NLJ to filter with child NLJ.
+   */
+  auto OptimizePredicateFilter(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef;
+
+  /**
    * @brief optimize nested loop join into hash join.
    * In the starter code, we will check NLJs with exactly one equal condition. You can further support optimizing joins
    * with multiple eq conditions.

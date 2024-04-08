@@ -7,6 +7,7 @@
 #include "binder/tokens.h"
 #include "common/macros.h"
 #include "execution/plans/abstract_plan.h"
+#include "execution/plans/filter_plan.h"
 #include "execution/plans/nested_loop_join_plan.h"
 #include "optimizer/optimizer.h"
 
@@ -51,7 +52,7 @@ auto CompareBelongsTo(const ComparisonExpression *expr) -> int32_t {
  * @param offset the number of column, at left side of plan's table.
  * @param expr the exprs of plan.
  */
-auto RewriteComlumnExpr(const NestedLoopJoinPlanNode *plan, uint32_t offset,  // NOLINT
+auto RewriteColExprJoin(const NestedLoopJoinPlanNode *plan, uint32_t offset,  // NOLINT
                         std::vector<AbstractExpressionRef> &expr) {           // NOLINT
 
   // sizes for iter.
@@ -109,7 +110,7 @@ auto RewriteCompExpr(const NestedLoopJoinPlanNode *plan,          // NOLINT
       // it is not a NLJ plan node, so skip it cuz it don't have left and right table.
       continue;
     }
-    ret[i] = RewriteComlumnExpr(temp, offsets[i], ret[i]);
+    ret[i] = RewriteColExprJoin(temp, offsets[i], ret[i]);
   }
   return ret;
 }
@@ -225,11 +226,106 @@ auto Optimizer::OptimizeMultiTimesNLJ(const AbstractPlanNodeRef &plan) -> Abstra
   return optimized;
 }
 
+/**
+ * @brief change cmp expr for left and right to a single table.
+ */
+auto ExprPushUp(NestedLoopJoinPlanNode *plan,               // NOLINT
+                std::vector<AbstractExpressionRef> &expr) { // NOLINT
+  auto left_size = plan->GetLeftPlan()->OutputSchema().GetColumnCount();
+  std::vector<AbstractExpressionRef> ret;
+  ret.reserve(expr.size());
+  std::vector<AbstractExpressionRef> sides(2);
+  for (const auto &comp : expr) {
+    for (uint32_t i = 0; i < 2; i++) {
+      auto type = Optimizer::GetValueExpressionType(comp->children_[i].get());
+      if (type == Optimizer::ValueExpressionType::CONST_VALUE) {
+        // Const expr has no effect to classify comp's belonging
+        sides[i] = comp->children_[i];
+        continue;
+      }
+      auto column = dynamic_cast<ColumnValueExpression *>(comp->children_[i].get());
+      if (column == nullptr) {
+        throw Exception{"Invalid expr type"};
+      }
+      auto idx = column->GetColIdx();
+      if (column->GetTupleIdx() == 1) {
+        idx += left_size;
+      }
+      auto return_type = column->GetReturnType();
+      sides[i] = std::make_shared<ColumnValueExpression>(0, idx, return_type);
+    }
+    ret.push_back(comp->CloneWithChildren(sides));
+  }
+  return ret;
+}
+/**
+ * @brief classify the comparision expression.
+ *        Make filters to its child expr it it can.
+ */
+auto NodeWrap(NestedLoopJoinPlanNode *plan,                    // NOLINT
+              std::vector<const ComparisonExpression *> &expr) // NOLINT
+              -> AbstractPlanNodeRef {
+  std::vector<AbstractExpressionRef> eq;
+  std::vector<AbstractExpressionRef> ne;
+  // 1. find all eq expr, and others.
+  for (const auto &cmp : expr) {
+    if (cmp->comp_type_ == ComparisonType::Equal) {
+      eq.push_back(cmp->CloneWithChildren(cmp->children_));
+    } else {
+      ne.push_back(cmp->CloneWithChildren(cmp->children_));
+    }
+  }
+  if (ne.empty()) {
+    return nullptr;
+  }
+  // 2. rewrite ne.
+  ne = ExprPushUp(plan, ne);
+  AbstractExpressionRef predicate = BuildLogicExprTree(eq);
+  AbstractPlanNodeRef nljp = std::make_shared<NestedLoopJoinPlanNode>( // NOLINT
+                                           plan->output_schema_,       // NOLINT
+                                           plan->GetLeftPlan(),        // NOLINT
+                                           plan->GetRightPlan(),       // NOLINT
+                                           predicate,                  // NOLINT
+                                           plan->join_type_);
+  predicate = BuildLogicExprTree(ne);
+  return std::make_shared<FilterPlanNode>(plan->output_schema_, // NOLINT
+                                          predicate, nljp);     // NOLINT
+}
+
+auto Optimizer::OptimizePredicateFilter(const AbstractPlanNodeRef &plan) // NOLINT
+                                        -> AbstractPlanNodeRef {
+  std::vector<AbstractPlanNodeRef> children;
+  for (const auto &child : plan->GetChildren()) {
+    children.emplace_back(OptimizePredicateFilter(child));
+  }
+  auto optimized = plan->CloneWithChildren(std::move(children));
+
+  if (optimized->GetType() != PlanType::NestedLoopJoin) {
+    return optimized;
+  }
+
+  BUSTUB_ASSERT(optimized->children_.size() == 2, "NLJ must contain only 2 child.");
+  auto nljp = dynamic_cast<NestedLoopJoinPlanNode *>(optimized.get());
+  BUSTUB_ASSERT(nljp != nullptr, "NLJ plan node down cast failed.");
+  std::vector<const ComparisonExpression *> comp;
+  if (!FindAllCompExpressionIfAllLogicExprIsAnd(nljp->predicate_.get(), comp)) {
+    return optimized;
+  }
+  if (comp.empty()) {
+    return optimized;
+  }
+  if (auto temp = NodeWrap(nljp, comp); temp != nullptr) {
+    return temp;
+  }
+  return optimized;
+}
+
 auto Optimizer::OptimizeCustom(const AbstractPlanNodeRef &plan) -> AbstractPlanNodeRef {
   auto p = plan;
   p = OptimizeMergeProjection(p);
   p = OptimizeMergeFilterNLJ(p);
   p = OptimizeMultiTimesNLJ(p);
+  p = OptimizePredicateFilter(p);
   p = OptimizeNLJAsHashJoin(p);
   p = OptimizeOrderByAsIndexScan(p);
   p = OptimizeSortLimitAsTopN(p);
