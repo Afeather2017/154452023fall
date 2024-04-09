@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/exception.h"
 #include "storage/page/page.h"
 
 #ifndef AFEATHER_ENSURE_
@@ -146,7 +147,7 @@ class BasicPageGuard {
     MEM_CALL();
     ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
     if (bpm_ == nullptr) {
-      return nullptr;
+      throw Exception{"Unable get data of invalid page guard"};
     }
     return reinterpret_cast<const T *>(GetData());
   }
@@ -158,7 +159,7 @@ class BasicPageGuard {
     MEM_CALL();
     ENSURE((bpm_ == nullptr && page_ == nullptr) || (bpm_ != nullptr && page_ != nullptr && page_->GetPinCount() > 0));
     if (bpm_ == nullptr) {
-      return nullptr;
+      throw Exception{"Unable get data of invalid page guard"};
     }
     return reinterpret_cast<T *>(GetDataMut());
   }
@@ -229,7 +230,7 @@ class ReadPageGuard {
     ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
            (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
     if (guard_.bpm_ == nullptr) {
-      return nullptr;
+      throw Exception{"Unable get data of invalid page guard"};
     }
     return guard_.As<T>();
   }
@@ -296,7 +297,7 @@ class WritePageGuard {
     ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
            (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
     if (guard_.bpm_ == nullptr) {
-      return nullptr;
+      throw Exception{"Unable get data of invalid page guard"};
     }
     return guard_.As<T>();
   }
@@ -309,7 +310,7 @@ class WritePageGuard {
     ENSURE((guard_.bpm_ == nullptr && guard_.page_ == nullptr) ||
            (guard_.bpm_ != nullptr && guard_.page_ != nullptr && guard_.page_->GetPinCount() > 0));
     if (guard_.bpm_ == nullptr) {
-      return nullptr;
+      throw Exception{"Unable get data of invalid page guard"};
     }
     return guard_.AsMut<T>();
   }
