@@ -10,7 +10,7 @@ key-info.md
 *gdb
 *input
 *.txt
-test.sh
+*.sh
 makefile
 
 
