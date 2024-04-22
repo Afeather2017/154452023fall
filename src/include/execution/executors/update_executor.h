@@ -53,7 +53,7 @@ class UpdateExecutor : public AbstractExecutor {
    *
    * NOTE: UpdateExecutor::Next() does not use the `rid` out-parameter.
    */
-  auto Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool override;
+  auto Next(Tuple *tuple, RID *rid) -> bool override;
 
   /** @return The output schema for the update */
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
@@ -66,6 +66,14 @@ class UpdateExecutor : public AbstractExecutor {
    *  @param txn the transaction.
    */
   void UpdateIndices(std::vector<Value> &new_v, std::vector<Value> &old_v, RID rid, Transaction *txn);
+
+  void InsertLog(TupleMeta &meta, RID rid, TransactionManager *txn_mgr,     //
+                               Transaction *txn, std::vector<Value> &old_v, //
+                               std::vector<Value> &new_v);
+
+  void UpdateLog(TupleMeta &meta, RID rid, TransactionManager *txn_mgr,     //
+                               Transaction *txn, std::vector<Value> &old_v, //
+                               std::vector<Value> &new_v);
 
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;

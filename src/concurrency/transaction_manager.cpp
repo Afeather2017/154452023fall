@@ -12,6 +12,7 @@
 
 #include "concurrency/transaction_manager.h"
 
+#include <algorithm>
 #include <memory>
 #include <mutex>  // NOLINT
 #include <optional>
@@ -70,13 +71,24 @@ auto TransactionManager::Commit(Transaction *txn) -> bool {
   }
 
   // TODO(fall2023): Implement the commit logic!
-
   std::unique_lock<std::shared_mutex> lck(txn_map_mutex_);
 
   // TODO(fall2023): set commit timestamp + update last committed timestamp here.
   txn->commit_ts_ = ++last_commit_ts_;
 
   txn->state_ = TransactionState::COMMITTED;
+  for (auto &[tid, set] : txn->write_set_) {
+    for (auto &rid : set) {
+      auto table_info = catalog_->GetTable(tid);
+      if (table_info == Catalog::NULL_TABLE_INFO) {
+        throw Exception{"Invalid table id"};
+      }
+      auto &table = table_info->table_;
+      auto meta = table->GetTupleMeta(rid);
+      meta.ts_ = txn->commit_ts_;
+      table->UpdateTupleMeta(meta, rid);
+    }
+  }
   running_txns_.UpdateCommitTs(txn->commit_ts_);
   running_txns_.RemoveTxn(txn->read_ts_);
 
@@ -95,6 +107,65 @@ void TransactionManager::Abort(Transaction *txn) {
   running_txns_.RemoveTxn(txn->read_ts_);
 }
 
-void TransactionManager::GarbageCollection() { UNIMPLEMENTED("not implemented"); }
+void TransactionManager::GarbageCollection() {
+  std::unordered_set<RID> write_set;
+  std::unordered_set<txn_id_t> has_accessible_log_txn;
+  auto watermark = GetWatermark();
+  fmt::println(stderr, "Watermark {}, {} txn in GC", watermark, txn_map_.size());
+
+  // FIXME: Unusual use. We need ts of table heap to verify,
+  //        but the ctor of TableHeap need only a pointer of bpm.
+  const auto &heap = catalog_->GetTable(catalog_->GetTableNames().at(0))->table_;
+  {
+    // In order to not iterate all table heap, we iterate the write set.
+    std::shared_lock l{txn_map_mutex_};
+    for (const auto &[_, txn] : txn_map_) {
+      for (const auto &[_, set] : txn->GetWriteSets()) {
+        for (const auto &rid : set) {
+          write_set.insert(rid);
+        }
+      }
+    }
+    for (auto &rid : write_set) {
+      auto meta = heap->GetTupleMeta(rid);
+      if (meta.ts_ <= watermark) {
+        continue;
+      }
+      for (VersionChainIter iter{this, rid}; !iter.IsEnd(); iter.Next()) {
+        auto txn_iter = txn_map_.find(iter.GetLink().prev_txn_);
+        if (txn_iter == txn_map_.end()) {
+          continue;
+        }
+        auto ts = iter.Get().ts_;
+        has_accessible_log_txn.insert(iter.GetLink().prev_txn_);
+        if (ts <= watermark) {
+          // The remains should not be iterated.
+          break;
+        }
+      }
+    }
+  }
+  
+
+  {
+    std::unique_lock l{txn_map_mutex_};
+    for (auto i = txn_map_.begin(); i != txn_map_.end();) {
+      if (i->second->GetTransactionState() == TransactionState::RUNNING) {
+        i++;
+        continue;
+      }
+      if (i->second->GetTransactionState() == TransactionState::TAINTED) {
+        i++;
+        continue;
+      }
+      if (has_accessible_log_txn.find(i->first) != has_accessible_log_txn.end()) {
+        i++;
+        continue;
+      }
+      fmt::println(stderr, "txn_id={:x} GCed", i->second->GetTransactionId());
+      txn_map_.erase(i++);
+    }
+  }
+}
 
 }  // namespace bustub

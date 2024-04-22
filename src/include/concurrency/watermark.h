@@ -1,6 +1,7 @@
 #pragma once
 
 #include <unordered_map>
+#include <map>
 
 #include "concurrency/transaction.h"
 #include "storage/table/tuple.h"
@@ -34,7 +35,9 @@ class Watermark {
 
   timestamp_t watermark_;
 
-  std::unordered_map<timestamp_t, int> current_reads_;
+  // I haven't figured out the solution that use unordered_map<timestamps, int>
+  // std::unordered_map<timestamp_t, int> current_reads_;
+  std::map<timestamp_t, int> current_reads_;
 };
 
 };  // namespace bustub

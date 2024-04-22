@@ -1,29 +1,204 @@
 #include "execution/execution_common.h"
+#include <memory>
+#include <optional>
+#include <vector>
 #include "catalog/catalog.h"
 #include "common/config.h"
 #include "common/macros.h"
-#include "concurrency/transaction_manager.h"
+#include "execution/expressions/column_value_expression.h"
 #include "fmt/core.h"
+#include "fmt/format.h"
 #include "storage/table/table_heap.h"
 #include "type/value.h"
 #include "type/value_factory.h"
 
 namespace bustub {
 
-auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple, const TupleMeta &base_meta,
-                      const std::vector<UndoLog> &undo_logs) -> std::optional<Tuple> {
-  UNIMPLEMENTED("not implemented");
+class ColumnValueExpression;
+
+/**
+ * @brief use a schema and its corrosponding tuple to construct values
+ */
+auto ReconstructValuesFromTuple(const Schema *schema, //
+                                const Tuple &tuple) -> std::vector<Value>{
+  std::vector<Value> values(schema->GetColumnCount());
+  for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
+    const auto &col = schema->GetColumn(i);
+    ColumnValueExpression expr(0, i, col.GetType());
+    values[i] = expr.Evaluate(&tuple, *schema);
+  }
+  return values;
 }
 
-void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, const TableInfo *table_info,
-               TableHeap *table_heap) {
-  // always use stderr for printing logs...
-  fmt::println(stderr, "debug_hook: {}", info);
+/**
+ * @brief replace the changed values, use the info of log without checking is_deleted.
+ */
+void ApplyModifiedTo(std::vector<Value> &values,                 //
+                     const Schema *schema, const UndoLog &log) { //
+  std::vector<Column> columns;
+  std::vector<uint32_t> col_indices;
+  for (uint32_t i = 0; i < log.modified_fields_.size(); i++) {
+    if (!log.modified_fields_[i]) {
+      continue;
+    }
+    columns.push_back(schema->GetColumn(i));
+    col_indices.push_back(i);
+  }
+  Schema new_schema{columns};
+  for (uint32_t i = 0; i < new_schema.GetColumnCount(); i++) {
+    const auto &col = schema->GetColumn(i);
+    ColumnValueExpression expr(0, i, col.GetType());
+    values[col_indices[i]] = expr.Evaluate(&log.tuple_, new_schema);
+  }
+}
 
-  fmt::println(
-      stderr,
-      "You see this line of text because you have not implemented `TxnMgrDbg`. You should do this once you have "
-      "finished task 2. Implementing this helper function will save you a lot of time for debugging in later tasks.");
+auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple, //
+                      const TupleMeta &base_meta,                    //
+                      const std::vector<UndoLog> &undo_logs          //
+                     ) -> std::optional<Tuple> {
+  // iterate all undo_logs
+  if (base_meta.is_deleted_ && undo_logs.empty()) {
+    return std::nullopt;
+  }
+  std::vector<Value> values;
+  bool deleted = base_meta.is_deleted_;
+  if (base_meta.is_deleted_) {
+    values.resize(schema->GetColumnCount());
+  } else {
+    values = ReconstructValuesFromTuple(schema, base_tuple);
+  }
+  for (const auto &log : undo_logs) {
+    deleted = log.is_deleted_;
+    if (deleted) {
+      for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
+        values[i] = Value{};
+      }
+    } else {
+      ApplyModifiedTo(values, schema, log);
+    }
+  }
+  if (deleted) {
+    return std::nullopt;
+  }
+  return {Tuple{std::move(values), schema}};
+}
+
+#include <sstream>
+
+
+/**
+ * @brief rebuild tuple, iterate all log chain, return after its ts = read_ts.
+ * @return the tuple is deleted or not.
+ */
+auto ReconstructFor(TransactionManager *txn_mgr, Transaction *txn, Tuple *tuple, //
+                    RID rid, TupleMeta &meta, const Schema *schema) -> bool {
+  auto read_ts = txn->GetReadTs();
+  auto txn_id = txn->GetTransactionId();
+  auto result = ReconstructValuesFromTuple(schema, *tuple);
+  if (!IsTempTs(meta.ts_)) {
+    if (meta.ts_ <= read_ts) {
+      return meta.is_deleted_;
+    }
+  } else {
+    if (meta.ts_ == txn->GetTransactionTempTs()) {
+      return meta.is_deleted_;
+    }
+  }
+  for (VersionChainIter iter{txn_mgr, rid}; !iter.IsEnd(); iter.Next()) {
+    auto log = iter.Get();
+    BUSTUB_ASSERT(!IsTempTs(log.ts_), "log.ts couldn't be a temp txn timestamp");
+    auto curr_txn_id = iter.GetLink().prev_txn_;
+
+    if (log.is_deleted_) {
+      for (auto &v : result) {
+        v = ValueFactory::GetNullValueByType(v.GetTypeId());
+      }
+    } else {
+      ApplyModifiedTo(result, schema, log);
+    }
+
+    if (log.ts_ <= read_ts || curr_txn_id == txn_id) {
+      if (!log.is_deleted_) {
+        *tuple = Tuple{result, schema};
+      }
+      return log.is_deleted_;
+    }
+  }
+  return true;
+}
+
+void PutHeader(std::stringstream &ss, RID rid, const TupleMeta &meta, //
+               const Tuple &tuple, const Schema *schema) {
+  auto rid_info = fmt::format("RID={}/{}", rid.GetPageId(), rid.GetSlotNum());
+  std::string txn_info;
+  std::string tuple_info;
+  if ((meta.ts_ & TXN_START_ID) != 0) {
+    txn_info = fmt::format("ts=txn{}", meta.ts_ & ~(TXN_START_ID));
+  } else {
+    txn_info = fmt::format("ts={}", meta.ts_);
+  }
+
+  if (meta.is_deleted_) {
+    tuple_info = "<del>";
+  } else {
+    tuple_info = tuple.ToString(schema);
+  }
+  ss << rid_info << ' ' << txn_info << ' ' << tuple_info << '\n';
+}
+
+void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, //
+               const TableInfo *table_info, TableHeap *table_heap) { //
+  // always use stderr for printing logs...
+  std::stringstream ss;
+  fmt::println("debug_hook: {}\n", info);
+  
+ for (auto iter = table_heap->MakeIterator(); !iter.IsEnd(); ++iter) {
+    auto rid = iter.GetRID();
+    auto [meta, tuple] = iter.GetTuple();
+    std::vector<Value> values = ReconstructValuesFromTuple(&table_info->schema_, tuple);
+    // header
+    PutHeader(ss, rid, meta, tuple, &table_info->schema_);
+    // chain
+    auto link_opt = txn_mgr->GetUndoLink(rid);
+    if (!link_opt.has_value()) {
+      throw Exception{fmt::format("Cannot get link from the rid{}/{}", //
+                                  rid.GetPageId(),                     //
+                                  rid.GetSlotNum())};
+    }
+    for (VersionChainIter iter{txn_mgr, rid}; !iter.IsEnd(); iter.Next()) {
+      auto link = iter.GetLink();
+      if (txn_mgr->txn_map_.find(link.prev_txn_) == txn_mgr->txn_map_.end()) {
+        ss << "remained will not show since it GCed\n";
+        break;
+      }
+      auto log = iter.Get();
+      if (log.is_deleted_) {
+        for (auto &v : values) {
+          v = Value{};
+        }
+        ss << fmt::format("  txn{}@{} <del> ts={}\n", GetTxnId(link.prev_txn_), //
+                          link.prev_log_idx_, log.ts_);
+      } else {
+        ApplyModifiedTo(values, &table_info->schema_, log);
+        auto size = log.modified_fields_.size();
+        ss << fmt::format("  txn{}@{} ", GetTxnId(link.prev_txn_), link.prev_log_idx_);
+        ss << '(';
+        for (uint32_t i = 0; i < size; i++) {
+          if (log.modified_fields_[i]) {
+            ss << values[i].ToString();
+          }
+          if (i + 1 == size) {
+            ss << ')';
+          } else {
+            ss << ',';
+          }
+        }
+        ss << fmt::format(" ts={}\n", log.ts_);
+      }
+    }
+  }
+
+  fmt::println(stderr, "{}", ss.str());
 
   // We recommend implementing this function as traversing the table heap and print the version chain. An example output
   // of our reference solution:

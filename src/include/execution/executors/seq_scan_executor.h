@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <sstream>
 #include <vector>
 
 #include "execution/executor_context.h"

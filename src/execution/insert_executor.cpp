@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <memory>
+#include <mutex>
 #include <vector>
 
+#include "concurrency/transaction_manager.h"
 #include "execution/executors/insert_executor.h"
 #include "execution/executors/projection_executor.h"
 #include "execution/executors/seq_scan_executor.h"
@@ -54,11 +56,17 @@ void InsertExecutor::InsertIndices(std::vector<Value> &v, RID rid, Transaction *
 
 auto InsertExecutor::InsertATuple(Tuple &tuple) -> RID {
   TupleMeta meta{};
+  auto txn = exec_ctx_->GetTransaction();
+  meta.ts_ = txn->GetTransactionTempTs();
+  meta.is_deleted_ = false;
   // BUSTUB_ASSERT(meta.is_deleted_ != true, "meta shall be false");
   auto result{table_info_->table_->InsertTuple(meta, tuple)};
   if (!result.has_value()) {
     throw Exception("Tuple too large");
   }
+  txn->AppendWriteSet(plan_->table_oid_, *result);
+  auto txn_mgr = exec_ctx_->GetTransactionManager();
+  txn_mgr->UpdateVersionLink(*result, VersionUndoLink{}, nullptr);
   return *result;
 }
 

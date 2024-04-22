@@ -11,12 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "execution/executors/seq_scan_executor.h"
+#include "concurrency/transaction_manager.h"
 #include "execution/expressions/comparison_expression.h"
+#include "execution/execution_common.h"
 
 namespace bustub {
 
-SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
-    : AbstractExecutor(exec_ctx), plan_{plan}, iter_{nullptr} {}
+SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx,      //
+                                 const SeqScanPlanNode *plan)    //
+    : AbstractExecutor(exec_ctx), plan_{plan}, iter_{nullptr} {} //
 
 void SeqScanExecutor::Init() {
   Catalog *catalog{exec_ctx_->GetCatalog()};
@@ -28,11 +31,13 @@ void SeqScanExecutor::Init() {
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   for (; !iter_->IsEnd(); ++(*iter_)) {
     auto [m, t]{iter_->GetTuple()};
-    if (m.is_deleted_) {
+    *rid = iter_->GetRID();
+    bool deleted = ReconstructFor(exec_ctx_->GetTransactionManager(), //
+                                    exec_ctx_->GetTransaction(),        //
+                                    &t, *rid, m, &plan_->OutputSchema());
+    if (deleted) {
       continue;
     }
-    *tuple = t;
-    *rid = iter_->GetRID();
     if (plan_->filter_predicate_ != nullptr) {
       auto result{plan_->filter_predicate_->Evaluate(&t, *schema_)};
       if (!result.GetAs<bool>()) {
@@ -40,6 +45,7 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       }
     }
     ++(*iter_);
+    *tuple = t;
     return true;
   }
   return false;

@@ -5,7 +5,7 @@ namespace bustub {
 
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
 
-TEST(TxnScanTest, DISABLED_TupleReconstructTest) {  // NOLINT
+TEST(TxnScanTest, TupleReconstructTest) {  // NOLINT
   auto schema = ParseCreateStatement("a integer,b double,c boolean");
   {
     fmt::println(stderr, "A: only base tuple");
@@ -103,7 +103,7 @@ TEST(TxnScanTest, DISABLED_TupleReconstructTest) {  // NOLINT
   }
 }
 
-TEST(TxnScanTest, DISABLED_ScanTest) {  // NOLINT
+TEST(TxnScanTest, ScanTest) {  // NOLINT
   auto bustub = std::make_unique<BustubInstance>();
   auto schema = ParseCreateStatement("a integer,b double,c boolean");
   auto modify_schema = ParseCreateStatement("a integer");
@@ -199,6 +199,11 @@ TEST(TxnScanTest, DISABLED_ScanTest) {  // NOLINT
                                                Tuple{{IntNull(), DoubleNull(), BoolNull()}, schema.get()});
   bustub->txn_manager_->UpdateVersionLink(rid4, VersionUndoLink{prev_log_5}, nullptr);
 
+  fmt::println("RIDs:{}/{}, {}/{}, {}/{}, {}/{}",
+               rid1.GetPageId(), rid1.GetSlotNum(),
+               rid2.GetPageId(), rid2.GetSlotNum(),
+               rid3.GetPageId(), rid3.GetSlotNum(),
+               rid4.GetPageId(), rid4.GetSlotNum());
   TxnMgrDbg("before verify scan", bustub->txn_manager_.get(), table_info, table_info->table_.get());
 
   auto query = "SELECT * FROM maintable";
@@ -210,6 +215,24 @@ TEST(TxnScanTest, DISABLED_ScanTest) {  // NOLINT
                                     {"2", "decimal_null", "boolean_null"},
                                     {"4", "4.000000", "true"},
                                     {"7", "decimal_null", "boolean_null"},
+                                }));
+  WithTxn(txn2, QueryShowResult(*bustub, _var, _txn, query,
+                                AnyResult{
+                                    {"2", "decimal_null", "boolean_null"},
+                                    {"6", "decimal_null", "boolean_null"},
+                                }));
+  WithTxn(txn3, QueryShowResult(*bustub, _var, _txn, query,
+                                AnyResult{
+                                    {"2", "decimal_null", "boolean_null"},
+                                    {"3", "decimal_null", "boolean_null"},
+                                    {"5", "3.000000", "false"},
+                                }));
+  WithTxn(txn4, QueryShowResult(*bustub, _var, _txn, query,
+                                AnyResult{
+                                    {"1", "decimal_null", "boolean_null"},
+                                    {"3", "decimal_null", "boolean_null"},
+                                    // RID3 is deleted.
+                                    {"6", "decimal_null", "boolean_null"},
                                 }));
 
   // hidden tests... this is the only hidden test case among task 1, 2, 3. We recommend you to implement `TxnMgrDbg`
