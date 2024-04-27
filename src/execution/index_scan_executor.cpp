@@ -10,7 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "execution/executors/index_scan_executor.h"
+#include <algorithm>
 #include <numeric>
+#include "execution/execution_common.h"
 
 namespace bustub {
 IndexScanExecutor::IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan)
@@ -40,8 +42,15 @@ auto IndexScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
     return false;
   }
   BUSTUB_ASSERT(result.size() == 1, "IndexScaned duplicate key");
-  *tuple = table_info_->table_->GetTuple(result[0]).second;
   *rid = result[0];
+  auto [meta, t] = table_info_->table_->GetTuple(result[0]);
+  auto deleted = ReconstructFor(exec_ctx_->GetTransactionManager(),      // NOLINT
+                                exec_ctx_->GetTransaction(),             // NOLINT
+                                &t, *rid, meta, &table_info_->schema_);  // NOLINT
+  if (deleted) {
+    return false;
+  }
+  *tuple = std::move(t);
   // Key is always unique, so return false next time.
   table_info_ = nullptr;
   return true;

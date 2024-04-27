@@ -23,7 +23,12 @@ inline auto GetTxnId(txn_id_t id) {
   return id & ~TXN_START_ID;
 }
 
-inline void ConfictDetect(TransactionManager *txn_mgr, Transaction *txn,
+/**
+ * @brief Detect conflict. After running the func,
+ *        you NEED ONLY to (1) check self modify, do something in this senario.
+ *                         (2) runs modification.
+ */
+inline void ConflictDetect(TransactionManager *txn_mgr, Transaction *txn,      // NOLINT
                    const TupleMeta &meta, RID rid, const std::string &type) {
   if (IsTempTs(meta.ts_)) {
     if (txn->GetTransactionTempTs() != meta.ts_) {
@@ -32,24 +37,43 @@ inline void ConfictDetect(TransactionManager *txn_mgr, Transaction *txn,
     }
   } else { // Commited ts
     if (txn->GetReadTs() < meta.ts_) {
+      // Will this possible?
+      // Yes. txn A, B start at the same time, but B modified and commit first.
+      // In this case, A cannot modify anymore.
       txn->SetTainted();
       throw ExecutionException{type + " commited conflicting occured."};
     }
   }
 }
 
-auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple, //
-                      const TupleMeta &base_meta,                    //
-                      const std::vector<UndoLog> &undo_logs)         //
+
+/**
+ * @brief this func will
+ *        (1) detect self opration, will perform a replace if it is.
+ *        (2) update meta in table info.
+ *        something not do
+ *        (1) update write set.
+ *        (2) conflict detect.
+ *        (3) any operation of index.
+ */
+void GenerateDeleteLogSmart(TupleMeta &meta, Tuple *tuple, RID rid,          // NOLINT
+                            const TableInfo *table_info, Transaction *txn,   // NOLINT
+                            TransactionManager *txn_mgr);
+
+void InsertWithIndexUpdate();
+
+auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple, // NOLINT
+                      const TupleMeta &base_meta,                    // NOLINT
+                      const std::vector<UndoLog> &undo_logs)         // NOLINT
   -> std::optional<Tuple>;
 
-void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, //
+void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, // NOLINT
                const TableInfo *table_info, TableHeap *table_heap);
 
 /**
  * @brief rebuild tuple, iterate all log chain, return after its ts = read_ts
  */
-auto ReconstructFor(TransactionManager *txn_mgr, Transaction *txn, Tuple *tuple, //
+auto ReconstructFor(TransactionManager *txn_mgr, Transaction *txn, Tuple *tuple, // NOL
                     RID rid, TupleMeta &meta, const Schema *schema) -> bool;
 
 class VersionChainIter {
@@ -57,8 +81,8 @@ class VersionChainIter {
   VersionChainIter(TransactionManager *txn_mgr, const RID rid): txn_mgr_{txn_mgr} {
     auto link_opt = txn_mgr->GetUndoLink(rid);
     if (!link_opt.has_value()) {
-      throw Exception{fmt::format("Cannot get link from the rid{}/{}", //
-                                  rid.GetPageId(),                     //
+      throw Exception{fmt::format("Cannot get link from the rid{}/{}", // NOLINT
+                                  rid.GetPageId(),                     // NOLINT
                                   rid.GetSlotNum())};
     }
     link_ = link_opt.value();

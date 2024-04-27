@@ -67,13 +67,29 @@ class UpdateExecutor : public AbstractExecutor {
    */
   void UpdateIndices(std::vector<Value> &new_v, std::vector<Value> &old_v, RID rid, Transaction *txn);
 
-  void InsertLog(TupleMeta &meta, RID rid, TransactionManager *txn_mgr,     //
-                               Transaction *txn, std::vector<Value> &old_v, //
-                               std::vector<Value> &new_v);
+  void InsertLog(TupleMeta &meta, RID rid, std::vector<Value> &old_v, // NOLINT
+                 std::vector<Value> &new_v);
 
-  void UpdateLog(TupleMeta &meta, RID rid, TransactionManager *txn_mgr,     //
-                               Transaction *txn, std::vector<Value> &old_v, //
-                               std::vector<Value> &new_v);
+  void UpdateLog(TupleMeta &meta, RID rid, std::vector<Value> &old_v, // NOLINT
+                 std::vector<Value> &new_v);
+
+  void GetNewValues(Tuple *tuple, std::vector<Value> &new_v);
+  void GetOldValues(Tuple *tuple, std::vector<Value> &old_v);
+
+  bool has_pk_ = false;
+
+  std::vector<Tuple> keys_;
+  std::vector<Value> index_temp_;
+  std::vector<RID> rids_;
+  void BuildKeys(const std::vector<Value> &values);
+  auto GetRID() -> RID;
+  void InsertNewIndices(RID rid);
+  auto UpdateWithPrimaryKey(Tuple *tuple, RID *rid) -> int;
+  void UpdateSelfOperation(TupleMeta &meta, RID rid, Tuple *tuple);
+  void UpdateDeleted(TupleMeta &meta, RID rid, Tuple *tuple);
+  auto InsertNewTuple(const Tuple *tuple) -> RID;
+
+  auto UpdateWithoutPrimaryKey(Tuple *tuple, RID *rid) -> int;
 
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;
@@ -89,5 +105,6 @@ class UpdateExecutor : public AbstractExecutor {
 
   /** The update transaction */
   Transaction *txn_;
+  TransactionManager *txn_mgr_;
 };
 }  // namespace bustub

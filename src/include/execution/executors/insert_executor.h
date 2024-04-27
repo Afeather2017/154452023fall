@@ -62,12 +62,26 @@ class InsertExecutor : public AbstractExecutor {
   /**
    * Insert the indices from tuple.
    */
-  void InsertIndices(std::vector<Value> &v, RID rid, Transaction *txn);
+  void InsertNewIndices(RID rid);
+  std::vector<Value> index_temp_;
+  std::vector<Tuple> keys_;
+  std::vector<RID> rids_;
+  void BuildIndices(Tuple *tuple);
+  auto GetRID() -> RID;
 
   /**
    * Insert a tuple.
    */
-  auto InsertATuple(Tuple &tuple) -> RID;
+  auto InsertNewTuple(const Tuple *tuple) -> RID;
+
+  /**
+   * @brief the txn insert to the deleted by it self.
+   */
+  void UpdateSelfOperation(TupleMeta &meta, RID rid, Tuple *tuple);
+  /**
+   * @brief the txn insert to the commited deleted.
+   */
+  void UpdateDeleted(TupleMeta &meta, RID rid, Tuple *tuple);
 
   /** The insert plan node to be executed*/
   const InsertPlanNode *plan_;
@@ -77,6 +91,7 @@ class InsertExecutor : public AbstractExecutor {
 
   const AbstractPlanNode *node_;
   Transaction *txn_;
+  TransactionManager *txn_mgr_;
 
   /** The schema for return a value */
   Schema return_schema_;
