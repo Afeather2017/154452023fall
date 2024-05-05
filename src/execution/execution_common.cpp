@@ -19,8 +19,8 @@ class ColumnValueExpression;
 /**
  * @brief use a schema and its corrosponding tuple to construct values
  */
-auto ReconstructValuesFromTuple(const Schema *schema, //
-                                const Tuple &tuple) -> std::vector<Value>{
+auto ReconstructValuesFromTuple(const Schema *schema,  //
+                                const Tuple &tuple) -> std::vector<Value> {
   std::vector<Value> values(schema->GetColumnCount());
   for (uint32_t i = 0; i < schema->GetColumnCount(); i++) {
     const auto &col = schema->GetColumn(i);
@@ -30,8 +30,8 @@ auto ReconstructValuesFromTuple(const Schema *schema, //
   return values;
 }
 
-void GenerateDeleteLogSmart(TupleMeta &meta, Tuple *tuple, RID rid,          // NOLINT
-                            const TableInfo *table_info, Transaction *txn,   // NOLINT
+void GenerateDeleteLogSmart(TupleMeta &meta, Tuple *tuple, RID rid,         // NOLINT
+                            const TableInfo *table_info, Transaction *txn,  // NOLINT
                             TransactionManager *txn_mgr) {
   if (txn->GetTransactionTempTs() != meta.ts_) {
     // Which means we have to generate an undo log
@@ -51,11 +51,33 @@ void GenerateDeleteLogSmart(TupleMeta &meta, Tuple *tuple, RID rid,          // 
   table_info->table_->UpdateTupleMeta(meta, rid);
 }
 
+void GenerateDeleteLogInPage(TupleMeta &meta, Tuple *tuple, RID rid,         // NOLINT
+                             const TableInfo *table_info, Transaction *txn,  // NOLINT
+                             TransactionManager *txn_mgr, TablePage *page) {
+  if (txn->GetTransactionTempTs() != meta.ts_) {
+    // Which means we have to generate an undo log
+    UndoLog log;
+    log.is_deleted_ = meta.is_deleted_;
+    log.modified_fields_.resize(table_info->schema_.GetColumnCount(), true);
+    log.ts_ = meta.ts_;
+    log.tuple_ = std::move(*tuple);
+    auto link = txn_mgr->GetUndoLink(rid);
+    if (link.has_value()) {
+      log.prev_version_ = *link;
+    }
+    txn_mgr->UpdateUndoLink(rid, txn->AppendUndoLog(log));
+  }
+  meta.is_deleted_ = true;
+  meta.ts_ = txn->GetTransactionTempTs();
+  *tuple = page->GetTuple(rid).second;
+  page->UpdateTupleMeta(meta, rid);
+}
+
 /**
  * @brief replace the changed values, use the info of log without checking is_deleted.
  */
-void ApplyModifiedTo(std::vector<Value> &values,                 //
-    const Schema *schema, const UndoLog &log) { //
+void ApplyModifiedTo(std::vector<Value> &values,                  //
+                     const Schema *schema, const UndoLog &log) {  //
   std::vector<Column> columns;
   std::vector<uint32_t> col_indices;
   for (uint32_t i = 0; i < log.modified_fields_.size(); i++) {
@@ -73,10 +95,10 @@ void ApplyModifiedTo(std::vector<Value> &values,                 //
   }
 }
 
-auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple, //
-    const TupleMeta &base_meta,                    //
-    const std::vector<UndoLog> &undo_logs          //
-    ) -> std::optional<Tuple> {
+auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple,  //
+                      const TupleMeta &base_meta,                     //
+                      const std::vector<UndoLog> &undo_logs           //
+                      ) -> std::optional<Tuple> {
   // iterate all undo_logs
   if (base_meta.is_deleted_ && undo_logs.empty()) {
     return std::nullopt;
@@ -106,13 +128,12 @@ auto ReconstructTuple(const Schema *schema, const Tuple &base_tuple, //
 
 #include <sstream>
 
-
 /**
  * @brief rebuild tuple, iterate all log chain, return after its ts = read_ts.
  * @return the tuple is deleted or not.
  */
-auto ReconstructFor(TransactionManager *txn_mgr, Transaction *txn, Tuple *tuple, //
-    RID rid, TupleMeta &meta, const Schema *schema) -> bool {
+auto ReconstructFor(TransactionManager *txn_mgr, Transaction *txn, Tuple *tuple,  //
+                    RID rid, TupleMeta &meta, const Schema *schema) -> bool {
   auto read_ts = txn->GetReadTs();
   auto txn_id = txn->GetTransactionId();
   auto result = ReconstructValuesFromTuple(schema, *tuple);
@@ -148,8 +169,8 @@ auto ReconstructFor(TransactionManager *txn_mgr, Transaction *txn, Tuple *tuple,
   return true;
 }
 
-void PutHeader(std::stringstream &ss, RID rid, const TupleMeta &meta, //
-    const Tuple &tuple, const Schema *schema) {
+void PutHeader(std::stringstream &ss, RID rid, const TupleMeta &meta,  //
+               const Tuple &tuple, const Schema *schema) {
   auto rid_info = fmt::format("RID={}/{}", rid.GetPageId(), rid.GetSlotNum());
   std::string txn_info;
   std::string tuple_info;
@@ -167,9 +188,9 @@ void PutHeader(std::stringstream &ss, RID rid, const TupleMeta &meta, //
   ss << rid_info << ' ' << txn_info << ' ' << tuple_info << '\n';
 }
 
-void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, //
-    const TableInfo *table_info, TableHeap *table_heap) { //
-                                                          // always use stderr for printing logs...
+void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr,  //
+               const TableInfo *table_info, TableHeap *table_heap) {
+  // always use stderr for printing logs...
   std::stringstream ss;
   fmt::println(stderr, "debug_hook: {}\n", info);
 
@@ -182,9 +203,9 @@ void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, //
     // chain
     auto link_opt = txn_mgr->GetUndoLink(rid);
     if (!link_opt.has_value()) {
-      throw Exception{fmt::format("Cannot get link from the rid{}/{}", //
-          rid.GetPageId(),                     //
-          rid.GetSlotNum())};
+      throw Exception{fmt::format("Cannot get link from the rid{}/{}",  //
+                                  rid.GetPageId(),                      //
+                                  rid.GetSlotNum())};
     }
     for (VersionChainIter iter{txn_mgr, rid}; !iter.IsEnd(); iter.Next()) {
       auto link = iter.GetLink();
@@ -197,8 +218,8 @@ void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, //
         for (auto &v : values) {
           v = Value{};
         }
-        ss << fmt::format("  txn{}@{} <del> ts={}\n", GetTxnId(link.prev_txn_), //
-            link.prev_log_idx_, log.ts_);
+        ss << fmt::format("  txn{}@{} <del> ts={}\n", GetTxnId(link.prev_txn_),  //
+                          link.prev_log_idx_, log.ts_);
       } else {
         ApplyModifiedTo(values, &table_info->schema_, log);
         auto size = log.modified_fields_.size();
@@ -216,6 +237,9 @@ void TxnMgrDbg(const std::string &info, TransactionManager *txn_mgr, //
         }
         ss << fmt::format(" ts={}\n", log.ts_);
       }
+      // if (txn_mgr->GetWatermark() >= log.ts_) {
+      //   break;
+      // }
     }
   }
 

@@ -192,9 +192,194 @@ TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateTest) {  // NOLINT
   }
 }
 
-TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateAbortTest) {  // NOLINT
+TEST(TxnIndexTest, SimpleAbort) {  // NOLINT
+  auto bustub = std::make_unique<BustubInstance>();
+  EnsureIndexScan(*bustub);
+  Execute(*bustub, "CREATE TABLE maintable(a int primary key, b int)");
+  auto table_info = bustub->catalog_->GetTable("maintable");
+  fmt::println(stderr, "With version chain");
+  {
+    auto txn1 = bustub->txn_manager_->Begin();
+    WithTxn(txn1, ExecuteTxn(*bustub, _var, _txn, "insert into maintable values (1, 2)"));
+    bustub->txn_manager_->Commit(txn1);
+    TxnMgrDbg("after txn1 insert", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+    auto txn2 = bustub->txn_manager_->Begin();
+    WithTxn(txn2, ExecuteTxn(*bustub, _var, _txn, "delete from maintable"));
+    TxnMgrDbg("after txn2 delete", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+    bustub->txn_manager_->Abort(txn2);
+    TxnMgrDbg("after txn2 abort", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+    auto txn3 = bustub->txn_manager_->Begin();
+    WithTxn(txn3, QueryShowResult(*bustub, _var, _txn, "select * from maintable",
+                                  IntResult{
+                                      {1, 2},
+                                  }));
+    txn3->GetCommitTs();
+  }
+
+  fmt::println(stderr, "Without version chain");
+  {
+    auto txn1 = bustub->txn_manager_->Begin();
+    WithTxn(txn1, ExecuteTxn(*bustub, _var, _txn, "insert into maintable values (3, 4)"));
+    TxnMgrDbg("after txn1 insert", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+    bustub->txn_manager_->Abort(txn1);
+    TxnMgrDbg("after txn1 abort", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+    auto txn2 = bustub->txn_manager_->Begin();
+    WithTxn(txn2, QueryShowResult(*bustub, _var, _txn, "select * from maintable",
+                                  IntResult{
+                                      {1, 2},
+                                  }));
+    bustub->txn_manager_->Commit(txn2);
+    TxnMgrDbg("after txn2 commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+  }
+
+  fmt::println(stderr, "With many version chain");
+  {
+    auto txn1 = bustub->txn_manager_->Begin();
+    WithTxn(txn1, ExecuteTxn(*bustub, _var, _txn, "insert into maintable values (5, 6)"));
+    bustub->txn_manager_->Commit(txn1);
+    TxnMgrDbg("after txn1 insert & commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn2 = bustub->txn_manager_->Begin();
+    WithTxn(txn2, ExecuteTxn(*bustub, _var, _txn, "update maintable set b = 7 where a = 5"));
+    bustub->txn_manager_->Commit(txn2);
+    TxnMgrDbg("after txn2 update & commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn3 = bustub->txn_manager_->Begin();
+    WithTxn(txn3, ExecuteTxn(*bustub, _var, _txn, "update maintable set b = 8 where a = 5"));
+    bustub->txn_manager_->Commit(txn3);
+    TxnMgrDbg("after txn3 update & commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn4 = bustub->txn_manager_->Begin();
+    WithTxn(txn4, ExecuteTxn(*bustub, _var, _txn, "update maintable set b = 9 where a = 5"));
+    TxnMgrDbg("after txn4 update", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+    bustub->txn_manager_->Abort(txn4);
+    TxnMgrDbg("after txn4 abort", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn5 = bustub->txn_manager_->Begin();
+    WithTxn(txn5, QueryShowResult(*bustub, _var, _txn, "select * from maintable",
+                                  IntResult{
+                                      {1, 2},
+                                      {5, 8},
+                                  }));
+    bustub->txn_manager_->Commit(txn5);
+  }
+
+  fmt::println(stderr, "With deleted version chain");
+  {
+    auto txn1 = bustub->txn_manager_->Begin();
+    WithTxn(txn1, ExecuteTxn(*bustub, _var, _txn, "insert into maintable values (10, 11)"));
+    bustub->txn_manager_->Commit(txn1);
+    TxnMgrDbg("after txn1 insert & commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn2 = bustub->txn_manager_->Begin();
+    WithTxn(txn2, ExecuteTxn(*bustub, _var, _txn, "delete from maintable where a = 10"));
+    bustub->txn_manager_->Commit(txn2);
+    TxnMgrDbg("after txn2 delete & commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn3 = bustub->txn_manager_->Begin();
+    WithTxn(txn3, ExecuteTxn(*bustub, _var, _txn, "insert into maintable values (10, 11)"));
+    bustub->txn_manager_->Abort(txn3);
+    TxnMgrDbg("after txn3 insert & abort", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn5 = bustub->txn_manager_->Begin();
+    WithTxn(txn5, QueryShowResult(*bustub, _var, _txn, "select * from maintable",
+                                  IntResult{
+                                      {1, 2},
+                                      {5, 8},
+                                  }));
+    bustub->txn_manager_->Commit(txn5);
+  }
+}
+
+TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateAbortTest2) {  // NOLINT
+#define STEP 1
   const auto generate_sql = [](int n) -> std::string {
-    return fmt::format("UPDATE maintable SET b = b + {} WHERE a = {}", 1, n);
+    return fmt::format("UPDATE maintable SET b = b + {} WHERE a = {}", STEP, n);
+  };
+  const int thread_cnt = 4;
+  const int number_cnt = 2;
+  const auto generate_insert_sql = [](int n) -> std::string {
+    std::vector<std::string> data;
+    data.reserve(n);
+    for (int i = 0; i < n; i++) {
+      data.push_back(fmt::format("({}, {})", i, 0));
+    }
+    return fmt::format("INSERT INTO maintable VALUES {}", fmt::join(data, ","));
+  };
+  const int operation_cnt = 1000;
+  auto bustub = std::make_unique<BustubInstance>();
+  EnsureIndexScan(*bustub);
+  Execute(*bustub, "CREATE TABLE maintable(a int primary key, b int)");
+  std::vector<std::thread> update_threads;
+  Execute(*bustub, generate_insert_sql(number_cnt), false);
+  TableHeapEntryNoMoreThan(*bustub, bustub->catalog_->GetTable("maintable"), number_cnt);
+  update_threads.reserve(thread_cnt);
+  std::map<int, std::vector<int>> operation_result;
+  std::mutex result_mutex;
+  global_disable_execution_exception_print.store(true);
+  for (int thread = 0; thread < thread_cnt; thread++) {
+    update_threads.emplace_back([&bustub, thread, generate_sql, &result_mutex, &operation_result]() {
+      NoopWriter writer;
+      std::vector<int> result(number_cnt, 0);
+      std::random_device dev;
+      std::mt19937 rng(dev());
+      std::uniform_int_distribution<std::mt19937::result_type> dist(0, number_cnt - 1);
+      for (int i = 0; i < operation_cnt; i++) {
+        int x = 0;
+        int y = 0;
+        do {
+          x = dist(rng);
+          y = dist(rng);
+        } while (x == y);
+        auto *txn = bustub->txn_manager_->Begin();
+        auto sql = generate_sql(x);
+        if (!bustub->ExecuteSqlTxn(sql, writer, txn)) {
+          bustub->txn_manager_->Abort(txn);
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          continue;
+        }
+        sql = generate_sql(y);
+        if (!bustub->ExecuteSqlTxn(sql, writer, txn)) {
+          bustub->txn_manager_->Abort(txn);
+          std::this_thread::sleep_for(std::chrono::milliseconds(1));
+          continue;
+        }
+        BUSTUB_ENSURE(bustub->txn_manager_->Commit(txn), "cannot commit??");
+        result[x] += STEP;
+        result[y] += STEP;
+      }
+      {
+        std::lock_guard<std::mutex> lck(result_mutex);
+        operation_result.emplace(thread, std::move(result));
+      }
+    });
+  }
+  for (auto &&thread : update_threads) {
+    thread.join();
+  }
+  {
+    auto table_info = bustub->catalog_->GetTable("maintable");
+    TxnMgrDbg("joined", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+  }
+  global_disable_execution_exception_print.store(false);
+  std::vector<std::vector<int>> expected_rows;
+  for (int i = 0; i < number_cnt; i++) {
+    int total = 0;
+    for (int j = 0; j < thread_cnt; j++) {
+      total += operation_result[j][i];
+    }
+    expected_rows.push_back({i, total});
+  }
+  auto *table_info = bustub->catalog_->GetTable("maintable");
+  auto query_txn = BeginTxn(*bustub, "query_txn");
+  WithTxn(query_txn, QueryShowResult(*bustub, _var, _txn, "SELECT * FROM maintable", expected_rows));
+  TableHeapEntryNoMoreThan(*bustub, table_info, number_cnt);
+}
+
+TEST(TxnIndexTest, IndexConcurrentUpdateAbortTest) {  // NOLINT
+#define STEP 1
+  const auto generate_sql = [](int n) -> std::string {
+    return fmt::format("UPDATE maintable SET b = b + {} WHERE a = {}", STEP, n);
   };
   const int thread_cnt = 8;
   const int number_cnt = 5;
@@ -248,8 +433,8 @@ TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateAbortTest) {  // NOLINT
             continue;
           }
           BUSTUB_ENSURE(bustub->txn_manager_->Commit(txn), "cannot commit??");
-          result[x] += 1;
-          result[y] += 1;
+          result[x] += STEP;
+          result[y] += STEP;
         }
         {
           std::lock_guard<std::mutex> lck(result_mutex);
@@ -259,6 +444,10 @@ TEST(TxnIndexTest, DISABLED_IndexConcurrentUpdateAbortTest) {  // NOLINT
     }
     for (auto &&thread : update_threads) {
       thread.join();
+    }
+    {
+      auto table_info = bustub->catalog_->GetTable("maintable");
+      TxnMgrDbg("joined", bustub->txn_manager_.get(), table_info, table_info->table_.get());
     }
     global_disable_execution_exception_print.store(false);
     std::vector<std::vector<int>> expected_rows;

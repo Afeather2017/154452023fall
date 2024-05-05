@@ -199,11 +199,8 @@ TEST(TxnScanTest, ScanTest) {  // NOLINT
                                                Tuple{{IntNull(), DoubleNull(), BoolNull()}, schema.get()});
   bustub->txn_manager_->UpdateVersionLink(rid4, VersionUndoLink{prev_log_5}, nullptr);
 
-  fmt::println("RIDs:{}/{}, {}/{}, {}/{}, {}/{}",
-               rid1.GetPageId(), rid1.GetSlotNum(),
-               rid2.GetPageId(), rid2.GetSlotNum(),
-               rid3.GetPageId(), rid3.GetSlotNum(),
-               rid4.GetPageId(), rid4.GetSlotNum());
+  fmt::println("RIDs:{}/{}, {}/{}, {}/{}, {}/{}", rid1.GetPageId(), rid1.GetSlotNum(), rid2.GetPageId(),
+               rid2.GetSlotNum(), rid3.GetPageId(), rid3.GetSlotNum(), rid4.GetPageId(), rid4.GetSlotNum());
   TxnMgrDbg("before verify scan", bustub->txn_manager_.get(), table_info, table_info->table_.get());
 
   auto query = "SELECT * FROM maintable";

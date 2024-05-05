@@ -253,6 +253,7 @@ auto BustubInstance::ExecuteSql(const std::string &sql, ResultWriter &writer,
 
 auto BustubInstance::ExecuteSqlTxn(const std::string &sql, ResultWriter &writer, Transaction *txn,
                                    std::shared_ptr<CheckOptions> check_options) -> bool {
+  // fmt::println(stderr, "{:x} {}", txn->GetTransactionTempTs(), sql);
   if (!sql.empty() && sql[0] == '\\') {
     // Internal meta-commands, like in `psql`.
     if (sql == "\\dt") {

@@ -31,9 +31,7 @@ UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *
   txn_mgr_ = exec_ctx_->GetTransactionManager();
 }
 
-void UpdateExecutor::Init() {
-  child_executor_->Init();
-}
+void UpdateExecutor::Init() { child_executor_->Init(); }
 
 void UpdateExecutor::UpdateIndices(std::vector<Value> &new_v, std::vector<Value> &old_v, RID rid, Transaction *txn) {
   // For-each indices, which could be composite indices.
@@ -56,8 +54,8 @@ void UpdateExecutor::UpdateIndices(std::vector<Value> &new_v, std::vector<Value>
   }
 }
 
-void UpdateExecutor::InsertLog(TupleMeta &meta, RID rid,     // NOLINT
-                               std::vector<Value> &old_v,    // NOLINT
+void UpdateExecutor::InsertLog(TupleMeta &meta, RID rid,   // NOLINT
+                               std::vector<Value> &old_v,  // NOLINT
                                std::vector<Value> &new_v) {
   UndoLog log;
   log.is_deleted_ = meta.is_deleted_;
@@ -83,8 +81,8 @@ void UpdateExecutor::InsertLog(TupleMeta &meta, RID rid,     // NOLINT
   txn_mgr_->UpdateUndoLink(rid, txn_->AppendUndoLog(log));
 }
 
-void UpdateExecutor::UpdateLog(TupleMeta &meta, RID rid,     // NOLINT
-                               std::vector<Value> &old_v,    // NOLINT
+void UpdateExecutor::UpdateLog(TupleMeta &meta, RID rid,   // NOLINT
+                               std::vector<Value> &old_v,  // NOLINT
                                std::vector<Value> &new_v) {
   auto link = txn_mgr_->GetUndoLink(rid);
   if (!link.has_value()) {
@@ -230,7 +228,8 @@ auto UpdateExecutor::InsertNewTuple(const Tuple *tuple) -> RID {
   return *result;
 }
 
-void UpdateExecutor::UpdateDeleted(TupleMeta &meta, RID rid, Tuple *tuple) {
+void UpdateExecutor::UpdateDeleted(TupleMeta &meta, RID rid,  // NOLINT
+                                   Tuple *tuple, TablePage *page) {
   auto link_opt = txn_mgr_->GetUndoLink(rid);
   if (!link_opt.has_value()) {
     throw Exception{"Cannot get undo link"};
@@ -238,24 +237,26 @@ void UpdateExecutor::UpdateDeleted(TupleMeta &meta, RID rid, Tuple *tuple) {
   UndoLink link = *link_opt;
   if (link.IsValid()) {
     UndoLog log;
-    log.ts_ = meta.ts_,
-    log.prev_version_ = link;
+    log.ts_ = meta.ts_, log.prev_version_ = link;
     log.is_deleted_ = true;
     txn_mgr_->UpdateUndoLink(rid, txn_->AppendUndoLog(log));
   }
   meta.is_deleted_ = false;
   meta.ts_ = txn_->GetTransactionTempTs();
-  table_info_->table_->UpdateTupleInPlace(meta, *tuple, rid);
+  table_info_->table_->UpdateTupleInPlaceWithLockAcquired(meta, *tuple, rid, page);
   txn_->AppendWriteSet(table_info_->oid_, rid);
 }
 
-void UpdateExecutor::UpdateSelfOperation(TupleMeta &meta, RID rid, Tuple *tuple) {
-  auto link_opt = txn_mgr_->GetUndoLink(rid);
-  if (!link_opt.has_value()) {
-    throw Exception{"Cannot get undo link"};
-  }
+void UpdateExecutor::UpdateSelfOperation(TupleMeta &meta, RID rid,  // NOLINT
+                                         Tuple *tuple, TablePage *page) {
+  /* there is nothing to do with undo link. It only delete and insert values
+   * auto link_opt = txn_mgr_->GetUndoLink(rid);
+   * if (!link_opt.has_value()) {
+   *   throw Exception{"Cannot get undo link"};
+   * }
+   */
   meta.is_deleted_ = false;
-  table_info_->table_->UpdateTupleInPlace(meta, *tuple, rid);
+  table_info_->table_->UpdateTupleInPlaceWithLockAcquired(meta, *tuple, rid, page);
   txn_->AppendWriteSet(table_info_->oid_, rid);
 }
 
@@ -268,9 +269,11 @@ auto UpdateExecutor::UpdateWithPrimaryKey(Tuple *tuple, RID *rid) -> int {
     GetNewValues(tuple, new_v);
     new_vs.emplace_back(std::move(new_v));
 
-    TupleMeta meta{table_info_->table_->GetTupleMeta(*rid)};
+    auto page_guard = table_info_->table_->AcquireTablePageWriteLock(*rid);
+    auto page = page_guard.AsMut<TablePage>();
+    TupleMeta meta{page->GetTupleMeta(*rid)};
     ConflictDetect(txn_mgr_, txn_, meta, *rid, "Update");
-    GenerateDeleteLogSmart(meta, tuple, *rid, table_info_, txn_, txn_mgr_);
+    GenerateDeleteLogInPage(meta, tuple, *rid, table_info_, txn_, txn_mgr_, page);
     txn_->AppendWriteSet(table_info_->oid_, *rid);
   }
 
@@ -285,22 +288,24 @@ auto UpdateExecutor::UpdateWithPrimaryKey(Tuple *tuple, RID *rid) -> int {
       InsertNewIndices(rid);
       continue;
     }
-    auto meta = table_info_->table_->GetTupleMeta(rid);
+    auto page_guard = table_info_->table_->AcquireTablePageWriteLock(rid);
+    auto page = page_guard.AsMut<TablePage>();
+    auto meta{page->GetTupleMeta(rid)};
     ConflictDetect(txn_mgr_, txn_, meta, rid, "Insert");
     if (meta.is_deleted_) {
       // Update log
       if (meta.ts_ == txn_->GetTransactionTempTs()) {
         // Self update
-        UpdateSelfOperation(meta, rid, tuple);
-      } else { // NOLINT
-        UpdateDeleted(meta, rid, tuple);
+        UpdateSelfOperation(meta, rid, tuple, page);
+      } else {  // NOLINT
+        UpdateDeleted(meta, rid, tuple, page);
       }
     } else {
       // Not deleted, there is duplicated index.
       txn_->SetTainted();
       throw ExecutionException{"Duplicated index!"};
     }
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
   return line_updated;
 }

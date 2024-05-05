@@ -6,8 +6,7 @@
 namespace bustub {
 
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
-
-TEST(TxnBonusTest, DISABLED_SerializableTest) {  // NOLINT
+TEST(TxnBonusTest, SerializableTest2) {  // NOLINT
   fmt::println(stderr, "--- SerializableTest2: Serializable ---");
   {
     auto bustub = std::make_unique<BustubInstance>();
@@ -28,12 +27,61 @@ TEST(TxnBonusTest, DISABLED_SerializableTest) {  // NOLINT
     WithTxn(txn_read, ExecuteTxn(*bustub, _var, _txn, "SELECT * FROM maintable WHERE a = 0"));
     WithTxn(txn2, CommitTxn(*bustub, _var, _txn));
     WithTxn(txn3, CommitTxn(*bustub, _var, _txn, EXPECT_FAIL));
+
+    TxnMgrDbg("after commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn4 = BeginTxnSerializable(*bustub, "txn4");
+    WithTxn(txn4, QueryShowResult(*bustub, _var, _txn, "select * from maintable",
+                                  IntResult{
+                                      {0, 100},
+                                      {0, 101},
+                                      {0, 102},
+                                      {0, 103},
+                                  }));
+
+    auto txn5 = BeginTxnSerializable(*bustub, "txn5");
+    auto txn6 = BeginTxnSerializable(*bustub, "txn6");
+    WithTxn(txn5, ExecuteTxn(*bustub, _var, _txn, "UPDATE maintable SET a = 0 WHERE a = 1"));
+    WithTxn(txn6, ExecuteTxn(*bustub, _var, _txn, "UPDATE maintable SET a = 1 WHERE a = 0"));
+    TxnMgrDbg("after two updates", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+    WithTxn(txn5, CommitTxn(*bustub, _var, _txn));
+    WithTxn(txn6, CommitTxn(*bustub, _var, _txn));
+    TxnMgrDbg("after 2nd commit", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+    auto txn7 = BeginTxnSerializable(*bustub, "txn7");
+    WithTxn(txn7, QueryShowResult(*bustub, _var, _txn, "select * from maintable",
+                                  IntResult{
+                                      {1, 100},
+                                      {1, 101},
+                                      {1, 102},
+                                      {1, 103},
+                                  }));
+
     WithTxn(txn_read, CommitTxn(*bustub, _var, _txn));
-    // test continues on Gradescope...
   }
 }
 
-TEST(TxnBonusTest, DISABLED_AbortTest) {  // NOLINT
+TEST(TxnBonusTest, SerializableTest4) {  // NOLINT
+  fmt::println(stderr, "--- SerializableTest4: Serializale with primary key ---");
+  auto bustub = std::make_unique<BustubInstance>();
+  EnsureIndexScan(*bustub);
+  Execute(*bustub, "CREATE TABLE maintable(a int primary key)");
+  auto table_info = bustub->catalog_->GetTable("maintable");
+
+  auto txn1 = BeginTxnSerializable(*bustub, "txn1");
+  WithTxn(txn1, ExecuteTxn(*bustub, _var, _txn, "INSERT INTO maintable VALUES (1), (100)"));
+  WithTxn(txn1, CommitTxn(*bustub, _var, _txn));
+  TxnMgrDbg("after txn1 commited", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+
+  auto txn2 = BeginTxnSerializable(*bustub, "txn2");
+  auto txn3 = BeginTxnSerializable(*bustub, "txn3");
+  WithTxn(txn2, ExecuteTxn(*bustub, _var, _txn, "UPDATE maintable SET a = a + 100 WHERE a  < 100"));
+  TxnMgrDbg("after txn2 update", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+  WithTxn(txn3, ExecuteTxn(*bustub, _var, _txn, "UPDATE maintable SET a = a - 100 WHERE a >= 100"));
+  TxnMgrDbg("after txn3 update", bustub->txn_manager_.get(), table_info, table_info->table_.get());
+}
+
+TEST(TxnBonusTest, AbortTest) {  // NOLINT
   fmt::println(stderr, "--- AbortTest1: Simple Abort ---");
   {
     auto bustub = std::make_unique<BustubInstance>();

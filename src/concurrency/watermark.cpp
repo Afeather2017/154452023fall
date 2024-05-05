@@ -22,7 +22,7 @@ auto Watermark::RemoveTxn(timestamp_t read_ts) -> void {
   if (iter->second == 0) {
     current_reads_.erase(iter);
   }
-  watermark_ = current_reads_.empty() ? commit_ts_: current_reads_.begin()->first;
+  watermark_ = current_reads_.empty() ? commit_ts_ : current_reads_.begin()->first;
 }
 
 }  // namespace bustub

@@ -110,39 +110,40 @@ TEST(TxnIndexTest, InsertDeleteTest) {  // NOLINT
 
   // hidden tests in-between
   auto txn3 = BeginTxn(*bustub, "txn3");
-  WithTxn(txn3, ExecuteTxn(*bustub, _var, _txn, "INSERT INTO maintable VALUES \
+  WithTxn(txn3, ExecuteTxn(*bustub, _var, _txn,
+                           "INSERT INTO maintable VALUES \
         (1, 1), (2, 1), (3, 1), (5, 1)"));
   WithTxn(txn3, QueryShowResult(*bustub, _var, _txn, "SELECT * FROM maintable",
-          IntResult{
-            {1, 1},
-            {2, 1},
-            {3, 1},
-            {5, 1},
-          }));
-  WithTxn(txn3, QueryIndex(*bustub, _var, _txn, query, "col1",
-          std::vector<int>{1, 2, 3, 5},
-          IntResult{{1, 1}, {2, 1}, {3, 1}, {5, 1}}));
+                                IntResult{
+                                    {1, 1},
+                                    {2, 1},
+                                    {3, 1},
+                                    {5, 1},
+                                }));
+  WithTxn(txn3, QueryIndex(*bustub, _var, _txn, query, "col1", std::vector<int>{1, 2, 3, 5},
+                           IntResult{{1, 1}, {2, 1}, {3, 1}, {5, 1}}));
   WithTxn(txn3, CommitTxn(*bustub, _var, _txn));
   TxnMgrDbg("txn3 commited", bustub->txn_manager_.get(), table_info, table_info->table_.get());
-  auto txn3_reverify = BeginTxn(*bustub, "txn3_reverify"); (void)txn3_reverify;
-  
+  auto txn3_reverify = BeginTxn(*bustub, "txn3_reverify");
+  (void)txn3_reverify;
+
   auto txn4 = BeginTxn(*bustub, "txn4");
   WithTxn(txn4, ExecuteTxn(*bustub, _var, _txn, "DELETE FROM maintable"));
-  WithTxn(txn4, QueryShowResult(*bustub, _var, _txn,
-          "SELECT * FROM maintable", IntResult{}));
+  WithTxn(txn4, QueryShowResult(*bustub, _var, _txn, "SELECT * FROM maintable", IntResult{}));
   WithTxn(txn4, CommitTxn(*bustub, _var, _txn));
   TxnMgrDbg("txn4 commited", bustub->txn_manager_.get(), table_info, table_info->table_.get());
 
   auto txn5 = BeginTxn(*bustub, "txn5");
-  WithTxn(txn5, ExecuteTxn(*bustub, _var, _txn, "INSERT INTO maintable VALUES \
+  WithTxn(txn5, ExecuteTxn(*bustub, _var, _txn,
+                           "INSERT INTO maintable VALUES \
         (1, 2), (2, 2), (3, 2), (4, 2)"));
   WithTxn(txn5, QueryShowResult(*bustub, _var, _txn, "SELECT * FROM maintable",
-          IntResult{
-            {1, 2},
-            {2, 2},
-            {3, 2},
-            {4, 2},
-          }));
+                                IntResult{
+                                    {1, 2},
+                                    {2, 2},
+                                    {3, 2},
+                                    {4, 2},
+                                }));
   WithTxn(txn5, CommitTxn(*bustub, _var, _txn));
   TxnMgrDbg("txn5 commited", bustub->txn_manager_.get(), table_info, table_info->table_.get());
 

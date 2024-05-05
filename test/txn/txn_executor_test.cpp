@@ -763,8 +763,7 @@ TEST(TxnExecutorTest, GarbageCollectionWithTainted) {  // NOLINT
           QueryShowResult(*bustub, _var, _txn, query, IntResult{{20, 0, 0}, {12, 2, 2}, {13, 3, 3}}));
 
   fmt::println(stderr, "G: 7th GC");
-  WithTxn(txn_watermark_at_3, CommitTxn(*bustub, _var, _txn))
-  GarbageCollection(*bustub);
+  WithTxn(txn_watermark_at_3, CommitTxn(*bustub, _var, _txn)) GarbageCollection(*bustub);
   TxnMgrDbg("after garbage collection", bustub->txn_manager_.get(), table_info, table_info->table_.get());
   WithTxn(txn_watermark_at_0, EnsureTxnGCed(*bustub, _var, txn_watermark_at_0_id));
   WithTxn(txn_watermark_at_1, EnsureTxnGCed(*bustub, _var, txn_watermark_at_1_id));

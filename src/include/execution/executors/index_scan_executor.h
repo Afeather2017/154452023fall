@@ -42,8 +42,9 @@ class IndexScanExecutor : public AbstractExecutor {
   auto Next(Tuple *tuple, RID *rid) -> bool override;
 
  private:
-  /** The index scan plan node to be executed. */
   const IndexScanPlanNode *plan_;
+
+  Transaction *txn_;
 
   TableInfo *table_info_;
 

@@ -12,29 +12,32 @@
 
 #include "execution/executors/seq_scan_executor.h"
 #include "concurrency/transaction_manager.h"
-#include "execution/expressions/comparison_expression.h"
 #include "execution/execution_common.h"
+#include "execution/expressions/comparison_expression.h"
 
 namespace bustub {
 
-SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx,      //
-                                 const SeqScanPlanNode *plan)    //
-    : AbstractExecutor(exec_ctx), plan_{plan}, iter_{nullptr} {} //
-
-void SeqScanExecutor::Init() {
+SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx,    // NOLINT
+                                 const SeqScanPlanNode *plan)  // NOLINT
+    : AbstractExecutor(exec_ctx), plan_{plan}, iter_{nullptr} {
   Catalog *catalog{exec_ctx_->GetCatalog()};
-  TableInfo *table_info{catalog->GetTable(plan_->table_name_)};
-  schema_ = &table_info->schema_;
-  iter_ = std::make_unique<TableIterator>(table_info->table_->MakeIterator());
+  table_info_ = catalog->GetTable(plan_->table_name_);
+  schema_ = &table_info_->schema_;
+  txn_ = exec_ctx_->GetTransaction();
+  if (plan_->filter_predicate_ != nullptr) {
+    txn_->AppendScanPredicate(table_info_->oid_, plan_->filter_predicate_);
+  }
 }
+
+void SeqScanExecutor::Init() { iter_ = std::make_unique<TableIterator>(table_info_->table_->MakeIterator()); }
 
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   for (; !iter_->IsEnd(); ++(*iter_)) {
     auto [m, t]{iter_->GetTuple()};
     *rid = iter_->GetRID();
-    bool deleted = ReconstructFor(exec_ctx_->GetTransactionManager(), //
-                                    exec_ctx_->GetTransaction(),        //
-                                    &t, *rid, m, &plan_->OutputSchema());
+    bool deleted = ReconstructFor(exec_ctx_->GetTransactionManager(),  //
+                                  exec_ctx_->GetTransaction(),         //
+                                  &t, *rid, m, &plan_->OutputSchema());
     if (deleted) {
       continue;
     }

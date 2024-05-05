@@ -67,10 +67,10 @@ class UpdateExecutor : public AbstractExecutor {
    */
   void UpdateIndices(std::vector<Value> &new_v, std::vector<Value> &old_v, RID rid, Transaction *txn);
 
-  void InsertLog(TupleMeta &meta, RID rid, std::vector<Value> &old_v, // NOLINT
+  void InsertLog(TupleMeta &meta, RID rid, std::vector<Value> &old_v,  // NOLINT
                  std::vector<Value> &new_v);
 
-  void UpdateLog(TupleMeta &meta, RID rid, std::vector<Value> &old_v, // NOLINT
+  void UpdateLog(TupleMeta &meta, RID rid, std::vector<Value> &old_v,  // NOLINT
                  std::vector<Value> &new_v);
 
   void GetNewValues(Tuple *tuple, std::vector<Value> &new_v);
@@ -85,8 +85,8 @@ class UpdateExecutor : public AbstractExecutor {
   auto GetRID() -> RID;
   void InsertNewIndices(RID rid);
   auto UpdateWithPrimaryKey(Tuple *tuple, RID *rid) -> int;
-  void UpdateSelfOperation(TupleMeta &meta, RID rid, Tuple *tuple);
-  void UpdateDeleted(TupleMeta &meta, RID rid, Tuple *tuple);
+  void UpdateSelfOperation(TupleMeta &meta, RID rid, Tuple *tuple, TablePage *page);
+  void UpdateDeleted(TupleMeta &meta, RID rid, Tuple *tuple, TablePage *page);
   auto InsertNewTuple(const Tuple *tuple) -> RID;
 
   auto UpdateWithoutPrimaryKey(Tuple *tuple, RID *rid) -> int;

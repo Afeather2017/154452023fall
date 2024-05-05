@@ -113,8 +113,7 @@ void InsertExecutor::UpdateDeleted(TupleMeta &meta, RID rid, Tuple *tuple) {
   UndoLink link = *link_opt;
   if (link.IsValid()) {
     UndoLog log;
-    log.ts_ = meta.ts_,
-    log.prev_version_ = link;
+    log.ts_ = meta.ts_, log.prev_version_ = link;
     log.is_deleted_ = true;
     txn_mgr_->UpdateUndoLink(rid, txn_->AppendUndoLog(log));
   }
@@ -149,7 +148,7 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       if (meta.ts_ == txn_->GetTransactionTempTs()) {
         // Self update
         UpdateSelfOperation(meta, *rid, tuple);
-      } else { // NOLINT
+      } else {  // NOLINT
         UpdateDeleted(meta, *rid, tuple);
       }
     } else {
@@ -157,7 +156,6 @@ auto InsertExecutor::Next(Tuple *tuple, RID *rid) -> bool {
       txn_->SetTainted();
       throw ExecutionException{"Duplicated index!"};
     }
-
   }
   Value size{TypeId::INTEGER, line_inserted};
   *tuple = Tuple{std::vector{size}, &return_schema_};
