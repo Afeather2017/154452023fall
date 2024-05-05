@@ -30,11 +30,12 @@ auto Optimizer::FindAnIndexRecursively(const AbstractExpression *expr) -> bool {
     std::swap(left, right);
   }
   if (left_type == ValueExpressionType::COLUMN_VALUE && right_type == ValueExpressionType::CONST_VALUE) {
-    if (dynamic_cast<const ComparisonExpression *>(expr) == nullptr) {
+    auto comp_expr = dynamic_cast<const ComparisonExpression *>(expr);
+    if (comp_expr == nullptr) {
       // for the case of EXPLAIN SELECT * FROM t1 WHERE v3 = (0 + v3);
       return false;
     }
-    eq_count_++;
+    eq_count_ += static_cast<int>(comp_expr->comp_type_ == ComparisonType::Equal);
     auto ptr = dynamic_cast<ColumnValueExpression *>(left);
     if (auto idx_id = FindIndex(ptr); idx_id != -1) {
       pred_key_ = dynamic_cast<ConstantValueExpression *>(right);
