@@ -22,7 +22,17 @@ auto Watermark::RemoveTxn(timestamp_t read_ts) -> void {
   if (iter->second == 0) {
     current_reads_.erase(iter);
   }
-  watermark_ = current_reads_.empty() ? commit_ts_ : current_reads_.begin()->first;
+  // Using RB-tree
+  // watermark_ = current_reads_.empty() ? commit_ts_ : current_reads_.begin()->first;
+  // Using hash-map
+  // explain:
+  //   last_commit_ts_ is always increasing, and the earlier values could not reach.
+  //   So we iterate watermark by increasing.
+  for (; watermark_ < commit_ts_; watermark_++) {
+    if (current_reads_.find(watermark_) != current_reads_.end()) {
+      break;
+    }
+  }
 }
 
 }  // namespace bustub

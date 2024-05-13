@@ -35,9 +35,8 @@ class Watermark {
 
   timestamp_t watermark_;
 
-  // I haven't figured out the solution that use unordered_map<timestamps, int>
-  // std::unordered_map<timestamp_t, int> current_reads_;
-  std::map<timestamp_t, int> current_reads_;
+  std::unordered_map<timestamp_t, int> current_reads_;
+  // std::map<timestamp_t, int> current_reads_;
 };
 
 };  // namespace bustub
