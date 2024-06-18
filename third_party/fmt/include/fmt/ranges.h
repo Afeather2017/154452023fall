@@ -209,6 +209,8 @@ class is_tuple_formattable_ {
  public:
   static constexpr const bool value = false;
 };
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtautological-compare"
 template <typename T, typename C> class is_tuple_formattable_<T, C, true> {
   template <std::size_t... Is>
   static std::true_type check2(index_sequence<Is...>,
@@ -225,6 +227,7 @@ template <typename T, typename C> class is_tuple_formattable_<T, C, true> {
   static constexpr const bool value =
       decltype(check(tuple_index_sequence<T>{}))::value;
 };
+#pragma GCC diagnostic pop
 
 template <typename Tuple, typename F, size_t... Is>
 FMT_CONSTEXPR void for_each(index_sequence<Is...>, Tuple&& t, F&& f) {
