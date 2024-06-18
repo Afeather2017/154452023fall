@@ -21,7 +21,7 @@
 #include "fmt/format.h"
 
 namespace bustub {
-
+// clang-format off
 #define BUSTUB_PLAN_NODE_CLONE_WITH_CHILDREN(cname)                                                            \
   auto CloneWithChildren(std::vector<AbstractPlanNodeRef> children) const -> std::unique_ptr<AbstractPlanNode> \
       override {                                                                                               \
@@ -29,6 +29,7 @@ namespace bustub {
     plan_node.children_ = children;                                                                            \
     return std::make_unique<cname>(std::move(plan_node));                                                      \
   }
+// clang-format on
 
 /** PlanType represents the types of plans that we have in our system. */
 enum class PlanType {

@@ -21,6 +21,7 @@
 #include "fmt/format.h"
 #include "storage/table/tuple.h"
 
+// clang-format off
 #define BUSTUB_EXPR_CLONE_WITH_CHILDREN(cname)                                                                     \
   auto CloneWithChildren(std::vector<AbstractExpressionRef> children) const -> std::unique_ptr<AbstractExpression> \
       override {                                                                                                   \
@@ -123,3 +124,4 @@ struct fmt::formatter<std::shared_ptr<T>, std::enable_if_t<std::is_base_of<bustu
     return fmt::formatter<std::string>::format("", ctx);
   }
 };
+// clang-format on

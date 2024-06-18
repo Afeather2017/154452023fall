@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #pragma once
-
+// clang-format off
 #include <cassert>
 #include <exception>
 #include <stdexcept>
@@ -44,3 +44,4 @@ namespace bustub {
   DISALLOW_MOVE(cname);
 
 }  // namespace bustub
+// clang-format on
