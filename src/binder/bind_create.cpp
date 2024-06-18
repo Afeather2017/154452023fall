@@ -43,7 +43,7 @@
 #include "common/exception.h"
 #include "common/util/string_util.h"
 #include "fmt/format.h"
-#include "fmt/ranges.h"
+// #include "fmt/ranges.h"
 #include "nodes/nodes.hpp"
 #include "nodes/primnodes.hpp"
 #include "pg_definitions.hpp"
